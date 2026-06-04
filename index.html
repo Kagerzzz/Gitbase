@@ -525,7 +525,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
   <div class="login-wrap">
     <div class="login-header">
       <div class="login-logo">Note<em>pad</em></div>
-      <div class="login-sub">Kagerz notepad</div>
+      <div class="login-sub">// personal notepad</div>
     </div>
     <div class="login-card">
       <div class="field">
@@ -768,6 +768,11 @@ function esc(s) {
 let notes = [], current = null, saveTimer = null, sharePerm = 'view', shareGen = false;
 let dragSrcId = null;
 
+// Chống lỗi autosave ghi nhầm tab:
+// - Mỗi lần lưu phải chụp snapshot gồm id + title + content tại thời điểm phát sinh thay đổi.
+// - Tuyệt đối không dùng `current` sau khi await, vì user có thể đã chuyển sang note khác.
+let isOpeningNote = false;
+
 // SHARE MODE
 async function checkShareMode() {
 // Đọc token từ /tab/slug hoặc fallback ?n=slug
@@ -1008,21 +1013,49 @@ function setSaveError() {
   el.textContent = 'Lỗi lưu';
 }
 
+function getEditorSnapshot() {
+  if (!current) return null;
+  return {
+    id: String(current.id),
+    title: document.getElementById('note-title-inp').value || 'Không có tiêu đề',
+    content: document.getElementById('editor').innerHTML
+  };
+}
+
+async function persistNoteSnapshot(snapshot) {
+  if (!snapshot || !snapshot.id) return;
+  await api({ action: 'updateNote', id: snapshot.id, title: snapshot.title, content: snapshot.content });
+
+  const updated_at = new Date().toISOString();
+  const idx = notes.findIndex(n => String(n.id) === snapshot.id);
+  if (idx !== -1) {
+    notes[idx] = { ...notes[idx], title: snapshot.title, content: snapshot.content, updated_at };
+  }
+
+  // Chỉ cập nhật editor/current nếu user vẫn đang đứng ở đúng note đó.
+  // Nếu user đã chuyển tab, không đụng vào `current` để tránh clone nội dung sang tab khác.
+  if (current && String(current.id) === snapshot.id) {
+    current = { ...current, title: snapshot.title, content: snapshot.content, updated_at };
+    renderList(document.getElementById('search-inp').value);
+    setLastSaved();
+  } else {
+    // Vẫn refresh danh sách để updated_at/title đúng, nhưng không đổi nội dung editor đang mở.
+    renderList(document.getElementById('search-inp').value);
+  }
+}
+
 function triggerSave() {
-  if (!current) return;
+  if (!current || isOpeningNote) return;
+  const snapshot = getEditorSnapshot();
+  if (!snapshot) return;
+
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
-    const title   = document.getElementById('note-title-inp').value || 'Không có tiêu đề';
-    const content = document.getElementById('editor').innerHTML;
     try {
-      await api({ action: 'updateNote', id: current.id, title, content });
-      current.title = title; current.content = content;
-      current.updated_at = new Date().toISOString();
-      const idx = notes.findIndex(n => n.id === current.id);
-      if (idx !== -1) notes[idx] = {...notes[idx], title, content, updated_at: current.updated_at};
-      renderList(document.getElementById('search-inp').value);
-      setLastSaved();
-    } catch(e) { setSaveError(); }
+      await persistNoteSnapshot(snapshot);
+    } catch(e) {
+      if (current && String(current.id) === snapshot.id) setSaveError();
+    }
   }, 1000);
 }
 
@@ -1330,23 +1363,18 @@ document.getElementById('sidebar-overlay').addEventListener('click', closeSideba
 async function manualSave() {
   if (!current) return;
   const btn = document.getElementById('btn-save-manual');
-  const title   = document.getElementById('note-title-inp').value || 'Không có tiêu đề';
-  const content = document.getElementById('editor').innerHTML;
+  const snapshot = getEditorSnapshot();
+  if (!snapshot) return;
+
   clearTimeout(saveTimer);
   btn.textContent = '⏳ Đang lưu...'; btn.className = 'btn-save-manual saving'; btn.disabled = true;
   try {
-    await api({ action: 'updateNote', id: current.id, title, content });
-    current.title = title; current.content = content;
-    current.updated_at = new Date().toISOString();
-    const idx = notes.findIndex(n => n.id === current.id);
-    if (idx !== -1) notes[idx] = {...notes[idx], title, content, updated_at: current.updated_at};
-    renderList(document.getElementById('search-inp').value);
+    await persistNoteSnapshot(snapshot);
     btn.textContent = '✓ Đã lưu'; btn.className = 'btn-save-manual saved';
-    setLastSaved();
     setTimeout(() => { btn.textContent = '💾 Lưu'; btn.className = 'btn-save-manual'; btn.disabled = false; }, 2000);
   } catch(e) {
     btn.textContent = '✕ Lỗi'; btn.className = 'btn-save-manual error';
-    setSaveError();
+    if (current && String(current.id) === snapshot.id) setSaveError();
     setTimeout(() => { btn.textContent = '💾 Lưu'; btn.className = 'btn-save-manual'; btn.disabled = false; }, 2500);
     toast('Lỗi lưu: ' + e.message);
   }
@@ -1358,6 +1386,7 @@ document.addEventListener('keydown', e => {
 
 // Đóng sidebar khi mở note trên mobile
 function openNote(n) {
+  isOpeningNote = true;
   current = n;
   document.getElementById('empty-state').style.display = 'none';
   const panel = document.getElementById('editor-panel');
@@ -1368,6 +1397,9 @@ function openNote(n) {
   setSaveInd('','');
   renderList(document.getElementById('search-inp').value);
   if (window.innerWidth <= 768) closeSidebar();
+  // Một số browser/extension có thể bắn input khi set innerHTML/value bằng code.
+  // Flag này ngăn autosave giả trong lúc hydrate nội dung note mới.
+  setTimeout(() => { isOpeningNote = false; }, 0);
 }
 
 // TOOLBAR
@@ -1524,19 +1556,24 @@ document.getElementById('btn-logout').addEventListener('click', () => {
 // ===== RELOAD NOTE =====
 document.getElementById('btn-reload-note').addEventListener('click', async () => {
   if (!current) return;
+  const noteId = String(current.id);
   const btn = document.getElementById('btn-reload-note');
   btn.style.opacity = '0.4';
   btn.style.pointerEvents = 'none';
   try {
     const data = await api({ action: 'getNotes' });
-    const fresh = (Array.isArray(data) ? data : []).find(n => n.id === current.id);
+    const fresh = (Array.isArray(data) ? data : []).find(n => String(n.id) === noteId);
     if (!fresh) { toast('Không tìm thấy ghi chú này'); return; }
-    // Cập nhật lại dữ liệu local
-    const idx = notes.findIndex(n => n.id === current.id);
+    // Cập nhật lại dữ liệu local theo noteId đã chụp trước request
+    const idx = notes.findIndex(n => String(n.id) === noteId);
     if (idx !== -1) notes[idx] = fresh;
-    current = fresh;
-    document.getElementById('note-title-inp').value = fresh.title || '';
-    document.getElementById('editor').innerHTML = fresh.content || '';
+    if (current && String(current.id) === noteId) {
+      isOpeningNote = true;
+      current = fresh;
+      document.getElementById('note-title-inp').value = fresh.title || '';
+      document.getElementById('editor').innerHTML = fresh.content || '';
+      setTimeout(() => { isOpeningNote = false; }, 0);
+    }
     setSaveInd('saved', '✓ đã tải lại');
     setTimeout(() => setSaveInd('',''), 2000);
     toast('✓ Đã tải lại ghi chú');
