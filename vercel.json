@@ -3,7 +3,7 @@
   "rewrites": [
     { "source": "/api.php", "destination": "/api/api" },
     { "source": "/tab/:slug", "destination": "/index.html" },
-    { "source": "/:slug([a-zA-Z0-9_-]+)", "destination": "/index.html" }
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
