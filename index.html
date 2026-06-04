@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Notepad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:         #0e0f11;
+  --surface:    #141618;
+  --surface2:   #1c1f23;
+  --surface3:   #23272e;
+  --border:     #2a2f38;
+  --border2:    #353c48;
+  --accent:     #5b9cf6;
+  --accent-dim: rgba(91,156,246,.12);
+  --green:      #4ade80;
+  --amber:      #fbbf24;
+  --red:        #f87171;
+  --text:       #dde3ed;
+  --text-2:     #8b95a6;
+  --text-3:     #4e5765;
+  --mono:       'IBM Plex Mono', monospace;
+  --serif:      'Fraunces', serif;
+  --radius:     10px;
+  --sidebar-w:  272px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 14px; line-height: 1.6; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
+
+/* IMG RESIZER */
+#img-resizer {
+  position: absolute; border: 2px solid var(--accent); z-index: 100;
+  pointer-events: none; /* Khung không chặn click, chỉ các phần tử con mới nhận event */
+}
+.resizer-handle {
+  position: absolute; right: -6px; bottom: -6px;
+  width: 14px; height: 14px; background: var(--accent); border-radius: 50%;
+  cursor: se-resize; pointer-events: auto; border: 2px solid var(--bg);
+}
+.resizer-zoom-btn {
+  position: absolute; right: 8px; top: 8px; background: rgba(20,22,24,.7);
+  backdrop-filter: blur(4px); border: 1px solid var(--border2);
+  color: var(--text); border-radius: 6px; padding: 4px 8px;
+  font-size: 12px; cursor: pointer; pointer-events: auto; transition: all .15s;
+}
+.resizer-zoom-btn:hover { background: var(--accent); border-color: var(--accent); }
+
+/* LIGHTBOX */
+#lightbox {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(14, 15, 17, 0.85); backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.lb-close {
+  position: absolute; top: 20px; right: 24px; background: none; border: none;
+  color: var(--text-2); font-size: 24px; cursor: pointer; z-index: 2; transition: color .15s;
+}
+.lb-close:hover { color: var(--red); }
+.lb-controls {
+  position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 8px; background: var(--surface); border: 1px solid var(--border2);
+  padding: 6px; border-radius: 10px; z-index: 2; box-shadow: 0 8px 24px rgba(0,0,0,.5);
+}
+.lb-controls button {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 6px; padding: 4px 12px; font-family: var(--mono); font-size: 13px;
+  cursor: pointer; transition: all .15s;
+}
+.lb-controls button:hover { background: var(--border2); }
+#lb-img {
+  max-width: 90vw; max-height: 90vh; border-radius: 4px; box-shadow: 0 12px 48px rgba(0,0,0,.6);
+  transition: transform 0.1s ease-out; /* Mượt mà khi zoom click, nhưng sẽ tắt khi drag */
+  cursor: grab; object-fit: contain;
+}
+#lb-img:active { cursor: grabbing; }    
+/* LOGIN */
+#login-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; z-index: 999;
+}
+.login-wrap { width: 400px; animation: fadeUp .4s ease; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.login-header { margin-bottom: 32px; }
+.login-logo { font-family: var(--serif); font-size: 28px; font-weight: 300; color: var(--text); letter-spacing: -0.5px; }
+.login-logo em { font-style: italic; color: var(--accent); }
+.login-sub { font-size: 12px; color: var(--text-3); margin-top: 6px; }
+.login-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 28px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 1.2px; }
+.field input {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 14px; color: var(--text); font-family: var(--mono); font-size: 13px;
+  outline: none; transition: border-color .15s; width: 100%;
+}
+.field input:focus { border-color: var(--accent); }
+.field input::placeholder { color: var(--text-3); }
+.btn-primary {
+  background: var(--accent); color: #fff; border: none; border-radius: 8px;
+  padding: 12px; font-family: var(--mono); font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: opacity .15s, transform .1s; width: 100%;
+}
+.btn-primary:hover { opacity: .88; }
+.btn-primary:active { transform: scale(.99); }
+.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.login-err { font-size: 12px; color: var(--red); min-height: 16px; text-align: center; }
+
+/* SHARE SCREEN */
+#share-screen { display: none; flex-direction: column; height: 100vh; }
+.share-bar {
+  height: 50px; background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 24px; gap: 12px; flex-shrink: 0;
+}
+.share-logo { font-family: var(--serif); font-size: 17px; font-weight: 300; font-style: italic; color: var(--accent); }
+.share-pill { font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border2); color: var(--text-2); }
+.share-pill.edit { border-color: var(--amber); color: var(--amber); }
+.share-body { flex: 1; overflow-y: auto; padding: 48px 24px; max-width: 900px; margin: 0 auto; width: 100%; }
+
+/* APP */
+#app { display: none; height: 100vh; flex-direction: column; }
+.topbar {
+  height: 50px; background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 16px; gap: 10px; flex-shrink: 0;
+}
+.topbar-logo { font-family: var(--serif); font-size: 18px; font-weight: 300; font-style: italic; color: var(--accent); }
+.topbar-save-group { display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: 8px; }
+.icon-btn {
+  background: none; border: 1px solid transparent; color: var(--text-2);
+  border-radius: 7px; padding: 5px 12px; font-family: var(--mono); font-size: 12px;
+  cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 6px;
+}
+.icon-btn:hover { border-color: var(--border2); color: var(--text); }
+.icon-btn.danger:hover { border-color: var(--red); color: var(--red); }
+.workspace { display: flex; flex: 1; overflow: hidden; }
+
+/* SIDEBAR */
+#sidebar {
+  width: var(--sidebar-w); min-width: var(--sidebar-w);
+  background: var(--surface); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sidebar-top {
+  padding: 12px 10px; border-bottom: 1px solid var(--border);
+  display: flex; gap: 8px; align-items: center;
+}
+.search-wrap { flex: 1; position: relative; }
+.search-wrap input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 7px; padding: 7px 10px 7px 30px; color: var(--text);
+  font-family: var(--mono); font-size: 12px; outline: none; transition: border-color .15s;
+}
+.search-wrap input:focus { border-color: var(--border2); }
+.search-wrap input::placeholder { color: var(--text-3); }
+.search-icon {
+  position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
+  color: var(--text-3); font-size: 13px; pointer-events: none;
+}
+.btn-new-note {
+  background: var(--accent-dim); border: 1px solid rgba(91,156,246,.3); color: var(--accent);
+  border-radius: 7px; width: 32px; height: 32px; font-size: 20px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .15s; flex-shrink: 0;
+}
+.btn-new-note:hover { background: rgba(91,156,246,.22); }
+#note-list { flex: 1; overflow-y: auto; padding: 6px; }
+.note-item {
+  padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: background .12s;
+  display: flex; align-items: flex-start; gap: 8px; position: relative;
+  border: 1px solid transparent; margin-bottom: 2px;
+}
+.note-item:hover { background: var(--surface2); }
+.note-item.active { background: var(--surface2); border-color: var(--border); }
+.note-item.active::before {
+  content: ''; position: absolute; left: 0; top: 6px; bottom: 6px;
+  width: 2px; background: var(--accent); border-radius: 2px;
+}
+.note-item-info { flex: 1; min-width: 0; }
+.note-title {
+  font-size: 13px; font-weight: 500; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px;
+}
+.note-date { font-size: 11px; color: var(--text-3); }
+.note-del {
+  opacity: 0; background: none; border: none; color: var(--text-3);
+  cursor: pointer; padding: 2px 5px; border-radius: 4px; font-size: 13px;
+  transition: all .12s; flex-shrink: 0;
+}
+.note-item:hover .note-del { opacity: 1; }
+.note-del:hover { color: var(--red); background: rgba(248,113,113,.1); }
+.list-empty { padding: 32px 16px; text-align: center; color: var(--text-3); font-size: 12px; line-height: 1.8; }
+
+/* EDITOR AREA */
+#editor-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+#empty-state {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 12px; color: var(--text-3);
+}
+.empty-glyph { font-family: var(--serif); font-size: 56px; font-weight: 300; font-style: italic; color: var(--border2); line-height: 1; }
+.empty-hint { font-size: 13px; }
+#editor-panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+
+/* TOOLBAR */
+.toolbar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 12px; gap: 2px;
+  height: 46px; flex-shrink: 0; overflow-x: auto; scrollbar-width: none;
+}
+.toolbar::-webkit-scrollbar { display: none; }
+#note-title-inp {
+  background: none; border: none; color: var(--text); font-family: var(--serif);
+  font-size: 15px; font-weight: 300; outline: none; flex: 1; min-width: 80px; padding: 4px 0;
+}
+#note-title-inp::placeholder { color: var(--text-3); }
+.tb-sep { width: 1px; height: 16px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
+.tb-btn {
+  background: none; border: none; color: var(--text-2); width: 28px; height: 28px;
+  border-radius: 5px; cursor: pointer; font-family: var(--mono); font-size: 12px;
+  display: flex; align-items: center; justify-content: center; transition: all .12s; flex-shrink: 0;
+}
+.tb-btn:hover { background: var(--surface2); color: var(--text); }
+/* Font size select */
+.tb-select-wrap { position: relative; display: flex; align-items: center; flex-shrink: 0; }
+.tb-select {
+  appearance: none; -webkit-appearance: none;
+  background: none; border: 1px solid var(--border); border-radius: 5px;
+  color: var(--text-2); font-family: var(--mono); font-size: 11px;
+  padding: 3px 18px 3px 6px; cursor: pointer; outline: none;
+  transition: border-color .12s, color .12s;
+}
+.tb-select:hover, .tb-select:focus { border-color: var(--border2); color: var(--text); }
+.tb-select option { background: var(--surface2); color: var(--text); }
+.tb-select-icon {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  color: var(--text-3); font-size: 9px; pointer-events: none;
+}
+.tb-pop-wrap { position: relative; display: flex; align-items: center; flex-shrink: 0; }
+.save-indicator { font-size: 11px; color: var(--text-3); transition: color .2s; }
+.save-indicator.saving { color: var(--accent); }
+.save-indicator.saved  { color: var(--green); }
+.save-indicator.error  { color: var(--red); }
+.btn-share-note {
+  background: none; border: 1px solid var(--border2); color: var(--text-2);
+  border-radius: 7px; padding: 5px 12px; font-family: var(--mono); font-size: 12px;
+  cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 5px;
+}
+.btn-share-note:hover { border-color: var(--accent); color: var(--accent); }
+.btn-save-manual {
+  background: none; border: 1px solid var(--border2); color: var(--text-2);
+  border-radius: 7px; padding: 5px 12px; font-family: var(--mono); font-size: 12px;
+  cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 5px;
+}
+.btn-save-manual:hover { border-color: var(--green); color: var(--green); }
+.btn-save-manual.saving { border-color: var(--accent); color: var(--accent); }
+.btn-save-manual.saved  { border-color: var(--green);  color: var(--green); }
+.btn-save-manual.error  { border-color: var(--red);    color: var(--red); }
+
+/* EDITOR CONTENT */
+#editor-wrap { flex: 1; overflow-y: auto; padding: 40px 64px; }
+#editor {
+  max-width: 900px; margin: 0 auto; min-height: calc(100vh - 200px);
+  outline: none; color: var(--text); font-family: var(--mono); font-size: 14px;
+  line-height: 1.85; caret-color: var(--accent);
+}
+#editor-panel.active #editor:empty::before { content: 'Bắt đầu ghi chú...'; color: var(--text-3); pointer-events: none; }
+#editor h1 { font-family: var(--serif); font-size: 26px; font-weight: 300; margin: 20px 0 10px; line-height: 1.3; }
+#editor h2 { font-family: var(--serif); font-size: 20px; font-weight: 300; margin: 16px 0 8px; }
+#editor h3 { font-family: var(--serif); font-size: 16px; font-weight: 600; margin: 14px 0 6px; }
+#editor ul, #editor ol { padding-left: 24px; margin: 6px 0; }
+#editor li { margin: 3px 0; }
+#editor strong { font-weight: 600; }
+#editor em { font-style: italic; color: var(--text-2); }
+#editor a { color: var(--accent); text-decoration: none; }
+#editor a:hover { text-decoration: underline; }
+#editor blockquote { border-left: 2px solid var(--accent); margin: 10px 0; padding: 6px 18px; color: var(--text-2); font-style: italic; }
+#editor code { background: var(--surface2); padding: 2px 7px; border-radius: 4px; font-size: 13px; color: var(--amber); }
+#editor hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+#editor img { 
+  max-width: 100%; 
+  border-radius: 8px; 
+  border: 1px solid var(--border); 
+  margin: 8px 4px; /* Giảm margin dọc xuống một chút, thêm margin ngang 4px để các ảnh cách nhau ra */
+  display: inline-block; /* Điểm mấu chốt để ảnh chung dòng */
+  vertical-align: middle; /* Căn giữa theo chiều dọc nếu 2 ảnh có chiều cao khác nhau */
+}
+.img-uploading {
+  display: inline-block; background: var(--surface2); border: 1px dashed var(--border2);
+  border-radius: 8px; padding: 12px 20px; color: var(--text-3); font-size: 12px; margin: 6px 0;
+}
+
+/* SHARE MODAL */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.65); backdrop-filter: blur(6px);
+  z-index: 500; display: none; align-items: center; justify-content: center;
+}
+.overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border2); border-radius: 14px;
+  padding: 28px; width: 440px; display: flex; flex-direction: column; gap: 18px;
+  animation: fadeUp .2s ease; box-shadow: 0 24px 64px rgba(0,0,0,.5);
+}
+.modal-title { font-size: 15px; font-weight: 500; }
+.modal-desc { font-size: 12px; color: var(--text-2); line-height: 1.7; }
+.perm-row { display: flex; gap: 8px; }
+.perm-opt {
+  flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px; text-align: center; cursor: pointer; font-family: var(--mono);
+  font-size: 12px; color: var(--text-2); transition: all .15s;
+}
+.perm-opt.sel { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.link-row { display: flex; gap: 8px; }
+.link-row input {
+  flex: 1; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 7px; padding: 9px 12px; color: var(--text-2); font-family: var(--mono); font-size: 11px; outline: none;
+}
+.btn-copy {
+  background: var(--accent); border: none; color: #fff; border-radius: 7px;
+  padding: 9px 16px; font-family: var(--mono); font-size: 12px; cursor: pointer;
+  transition: all .15s; white-space: nowrap;
+}
+.btn-copy:hover { opacity: .85; }
+.btn-copy.ok { background: var(--green); color: #000; }
+.modal-foot { display: flex; justify-content: flex-end; }
+.btn-ghost {
+  background: none; border: 1px solid var(--border); color: var(--text-2);
+  border-radius: 7px; padding: 7px 16px; font-family: var(--mono); font-size: 12px;
+  cursor: pointer; transition: all .15s;
+}
+.btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+
+/* TOAST */
+
+/* Link tooltip */
+#link-tooltip {
+  position: fixed; z-index: 400;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 6px 10px;
+  display: flex; align-items: center; gap: 6px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.5); font-size: 12px;
+}
+#link-tooltip .tip-href {
+  color: var(--accent); text-decoration: none; max-width: 260px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#link-tooltip .tip-href:hover { text-decoration: underline; }
+#link-tooltip .tip-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-2);
+  border-radius: 5px; width: 24px; height: 24px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 12px;
+  transition: all .12s; flex-shrink: 0;
+}
+#link-tooltip .tip-btn:hover { border-color: var(--accent); color: var(--accent); }
+#link-tooltip .tip-btn.danger:hover { border-color: var(--red); color: var(--red); }
+.color-picker-pop {
+  position: fixed; /* fixed thay vì absolute để không bị clip bởi overflow:hidden của toolbar */
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 10px; z-index: 300;
+  box-shadow: 0 8px 32px rgba(0,0,0,.6);
+  display: none; flex-direction: column; gap: 8px; width: 236px;
+}
+.color-picker-pop.open { display: flex; }
+.color-picker-pop label {
+  font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 1px;
+}
+.color-swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.swatch {
+  width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent;
+  cursor: pointer; transition: transform .12s, border-color .12s;
+}
+.swatch:hover { transform: scale(1.18); border-color: rgba(255,255,255,.35); }
+.swatch.clear {
+  background: none !important; border: 1px dashed var(--border2) !important;
+  font-size: 13px; display: flex; align-items: center; justify-content: center;
+  color: var(--text-3);
+}
+.tb-btn-color {
+  background: none; border: none; color: var(--text-2); height: 28px;
+  border-radius: 5px; cursor: pointer; font-family: var(--mono); font-size: 11px;
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+  transition: all .12s; flex-shrink: 0; position: relative; padding: 0 6px;
+}
+.tb-btn-color:hover { background: var(--surface2); color: var(--text); }
+.color-underline {
+  height: 3px; width: 100%; border-radius: 2px; position: absolute;
+  bottom: 3px; left: 0; background: currentColor; pointer-events: none;
+}
+
+/* ===== MOBILE RESPONSIVE ===== */
+#sidebar-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5);
+  z-index: 90; backdrop-filter: blur(2px);
+}
+.hamburger {
+  display: none; background: none; border: none; color: var(--text-2);
+  font-size: 20px; cursor: pointer; padding: 4px 8px; border-radius: 6px;
+  line-height: 1; transition: color .15s;
+}
+.hamburger:hover { color: var(--text); }
+
+@media (max-width: 768px) {
+  :root { --sidebar-w: 280px; }
+
+  /* Topbar */
+  .topbar { padding: 0 12px; gap: 8px; }
+  .hamburger { display: flex; align-items: center; }
+  .topbar-logo { font-size: 16px; }
+  .icon-btn { font-size: 11px; padding: 5px 8px; }
+
+  /* Sidebar: drawer từ trái */
+  #sidebar {
+    position: fixed; top: 0; left: 0; height: 100vh;
+    z-index: 100; transform: translateX(-100%);
+    transition: transform .25s cubic-bezier(.4,0,.2,1);
+    box-shadow: 4px 0 32px rgba(0,0,0,.4);
+  }
+  #sidebar.open {
+    transform: translateX(0);
+  }
+  #sidebar-overlay.open { display: block; }
+
+  /* Workspace: không bị đẩy bởi sidebar */
+  .workspace { position: relative; }
+
+  /* Editor: padding nhỏ hơn trên mobile */
+  #editor-wrap { padding: 20px 16px; }
+  #editor { min-height: calc(100vh - 160px); font-size: 13px; }
+
+  /* Toolbar: wrap + cuộn ngang */
+  .toolbar {
+    padding: 0 8px; gap: 2px; overflow-x: auto; flex-wrap: nowrap;
+    scrollbar-width: none; min-height: 42px;
+  }
+  .toolbar::-webkit-scrollbar { display: none; }
+  #note-title-inp { font-size: 14px; min-width: 80px; }
+  .toolbar-right { flex-shrink: 0; }
+  .btn-share-note { padding: 5px 8px; font-size: 11px; }
+  .btn-save-manual { padding: 5px 8px; font-size: 11px; }
+  .save-indicator { display: none; }
+  .topbar-save-group { gap: 6px; margin-right: 4px; }
+
+  /* Modal */
+  .modal { width: calc(100vw - 32px); padding: 20px; }
+
+  /* Login */
+  .login-wrap { width: calc(100vw - 40px); }
+
+  /* Share screen */
+  .share-body { padding: 24px 16px; }
+
+  /* Toast xuống thấp hơn trên mobile (tránh safe area) */
+  #toast { bottom: 32px; }
+
+  /* Color picker căn lại trên mobile */
+  .color-picker-pop { left: auto; right: 0; }
+}
+
+@media (max-width: 480px) {
+  .topbar { height: 46px; }
+  #editor-wrap { padding: 16px 12px; }
+}
+
+#toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--surface2); border: 1px solid var(--border2); color: var(--text);
+  padding: 9px 18px; border-radius: 8px; font-size: 12px;
+  opacity: 0; pointer-events: none; transition: all .22s; z-index: 9999; white-space: nowrap;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* SPINNER */
+.spin {
+  width: 16px; height: 16px; border: 2px solid var(--border2);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin .6s linear infinite; display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* RENDERED (share view) */
+.rendered { font-family: var(--mono); font-size: 14px; line-height: 1.85; color: var(--text); }
+.rendered h1 { font-family: var(--serif); font-size: 28px; font-weight: 300; margin-bottom: 16px; }
+.rendered h2 { font-family: var(--serif); font-size: 21px; font-weight: 300; margin: 18px 0 8px; }
+.rendered img { 
+  max-width: 100%; 
+  border-radius: 8px; 
+  border: 1px solid var(--border); 
+  margin: 8px 4px; 
+  display: inline-block; 
+  vertical-align: middle;
+}
+.rendered blockquote { border-left: 2px solid var(--accent); padding: 6px 18px; color: var(--text-2); font-style: italic; margin: 10px 0; }
+.rendered code { background: var(--surface2); padding: 2px 7px; border-radius: 4px; color: var(--amber); }
+.rendered a { color: var(--accent); }
+.rendered ul, .rendered ol { padding-left: 24px; }
+
+/* DRAG & DROP */
+.note-item[draggable="true"] { cursor: grab; }
+.note-item[draggable="true"]:active { cursor: grabbing; }
+.note-item.drag-over { background: var(--accent-dim); border-color: var(--accent); }
+.note-item.dragging { opacity: .4; }
+.drag-handle {
+  color: var(--text-3); font-size: 14px; flex-shrink: 0;
+  opacity: 0; transition: opacity .12s; cursor: grab; padding: 2px 4px;
+  line-height: 1; user-select: none;
+}
+.note-item:hover .drag-handle { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-wrap">
+    <div class="login-header">
+      <div class="login-logo">Note<em>pad</em></div>
+      <div class="login-sub">// personal notepad</div>
+    </div>
+    <div class="login-card">
+      <div class="field">
+        <label>Tài khoản</label>
+        <input id="inp-user" type="text" placeholder="admin" autocomplete="username"/>
+      </div>
+      <div class="field">
+        <label>Mật khẩu</label>
+        <input id="inp-pass" type="password" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+      <button class="btn-primary" id="btn-login">Đăng nhập</button>
+      <div class="login-err" id="login-err"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE SCREEN -->
+<div id="share-screen">
+  <div class="share-bar">
+    <div class="share-logo">Notepad</div>
+    <div class="share-pill" id="share-pill">👁 Chỉ xem</div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+      <span id="s-st" style="font-size:12px;color:var(--text-3)"></span>
+      <button id="s-save" style="display:none;background:var(--accent);border:none;color:#fff;border-radius:8px;padding:7px 18px;font-family:var(--mono);font-size:12px;font-weight:500;cursor:pointer;transition:opacity .15s">💾 Lưu thay đổi</button>
+    </div>
+  </div>
+  <div class="share-body" id="share-body"></div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div class="topbar">
+    <button class="hamburger" id="btn-hamburger" title="Mở danh sách">☰</button>
+    <div class="topbar-logo">Notepad</div>
+    <div class="topbar-save-group">
+      <span class="save-indicator" id="save-ind"></span>
+      <button class="btn-save-manual" id="btn-save-manual" title="Lưu thủ công (Ctrl+S)">💾 Lưu</button>
+      <button class="btn-share-note" id="btn-share">⤤ Chia sẻ</button>
+    </div>
+    <button class="icon-btn" id="btn-settings" title="Đổi tài khoản/mật khẩu">⚙ Cài đặt</button>
+    <button class="icon-btn danger" id="btn-logout">↩ Đăng xuất</button>
+  </div>
+  <div class="workspace">
+    <div id="sidebar-overlay"></div>
+    <div id="sidebar">
+      <div class="sidebar-top">
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input id="search-inp" type="text" placeholder="Tìm kiếm..."/>
+        </div>
+        <button class="btn-new-note" id="btn-new" title="Tạo ghi chú mới">+</button>
+      </div>
+      <div id="note-list"></div>
+    </div>
+    <div id="editor-area">
+      <div id="empty-state">
+        <div class="empty-glyph">∅</div>
+        <div class="empty-hint">Chọn hoặc tạo ghi chú mới</div>
+      </div>
+      <div id="editor-panel">
+        <!-- TOOLBAR: Title trái, format phải, 1 hàng -->
+        <div class="toolbar">
+          <input id="note-title-inp" placeholder="Tiêu đề..."/>
+          <div class="tb-sep"></div>
+          <button class="tb-btn" data-cmd="bold"           title="In đậm"><b>B</b></button>
+          <button class="tb-btn" data-cmd="italic"         title="In nghiêng"><i>I</i></button>
+          <button class="tb-btn" data-cmd="strikethrough"  title="Gạch ngang"><s>S</s></button>
+          <div class="tb-sep"></div>
+          <div class="tb-select-wrap" title="Cỡ chữ">
+            <select id="sel-fontsize" class="tb-select">
+              <option value="10px">10</option>
+              <option value="12px">12</option>
+              <option value="14px" selected>14</option>
+              <option value="16px">16</option>
+              <option value="18px">18</option>
+              <option value="22px">22</option>
+              <option value="28px">28</option>
+              <option value="36px">36</option>
+            </select>
+            <span class="tb-select-icon">▾</span>
+          </div>
+          <div class="tb-sep"></div>
+          <div class="tb-pop-wrap">
+            <button class="tb-btn-color" id="btn-fgcolor" title="Màu chữ">
+              <span style="font-size:13px;font-weight:700;line-height:1">A</span>
+              <div class="color-underline" id="fgcolor-bar" style="background:#5b9cf6"></div>
+            </button>
+            <div class="color-picker-pop" id="pop-fgcolor">
+              <label>Màu chữ</label>
+              <div class="color-swatches" id="sw-fg"></div>
+            </div>
+          </div>
+          <div class="tb-pop-wrap">
+            <button class="tb-btn-color" id="btn-bgcolor" title="Highlight">
+              <span style="font-size:15px;line-height:1">▐</span>
+              <div class="color-underline" id="bgcolor-bar" style="background:#fbbf24"></div>
+            </button>
+            <div class="color-picker-pop" id="pop-bgcolor">
+              <label>Highlight</label>
+              <div class="color-swatches" id="sw-bg"></div>
+            </div>
+          </div>
+          <div class="tb-sep"></div>
+          <button class="tb-btn" data-cmd="link"        title="Chèn link">↗</button>
+          <button class="tb-btn" data-cmd="uploadImage" title="Chèn ảnh">🖼</button>
+          <div class="tb-sep"></div>
+          <button class="tb-btn" id="btn-reload-note" title="Tải lại ghi chú" style="font-size:14px">↻</button>
+        </div>
+        <!-- Hidden file input for image upload -->
+        <input type="file" id="img-file-inp" accept="image/*" style="display:none"/>
+        <div id="editor-wrap">
+          <div id="editor" contenteditable="true" spellcheck="false"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div class="overlay" id="share-overlay">
+  <div class="modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <div class="modal-title">⤤ Chia sẻ ghi chú</div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button class="btn-primary" id="btn-save-share" style="padding:8px 16px;font-size:12px">💾 Cập nhật link</button>
+        <button class="btn-ghost" id="btn-modal-close">Đóng</button>
+      </div>
+    </div>
+    <div class="modal-desc">Tạo link chia sẻ. Người nhận chỉ thấy đúng ghi chú này, không thấy danh sách.</div>
+    <div class="perm-row">
+      <div class="perm-opt sel" data-perm="view">👁 Chỉ xem</div>
+      <div class="perm-opt"     data-perm="edit">✏️ Có thể sửa</div>
+      <div class="perm-opt"     data-perm="private">🔒 Riêng tư</div>
+    </div>
+    <div class="field" style="margin-top:4px">
+      <label>Đường dẫn tùy chỉnh (Slug)</label>
+      <input id="share-slug-inp" type="text" placeholder="vi-du: ghi-chu-quan-trong" style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; color: var(--text); font-family: var(--mono); font-size: 13px; outline: none; width: 100%;"/>
+    </div>
+    <div class="link-row">
+      <input id="share-link" type="text" readonly placeholder="Nhấn 'Cập nhật link' để tạo link..."/>
+      <button class="btn-copy" id="btn-copy">Sao chép</button>
+    </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="overlay" id="settings-overlay">
+  <div class="modal" style="max-width:420px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div class="modal-title">⚙ Đổi tài khoản / mật khẩu</div>
+      <button class="btn-ghost" id="btn-settings-close">Đóng</button>
+    </div>
+    <div class="modal-desc" style="margin-bottom:8px">Nhập thông tin hiện tại để xác nhận, sau đó nhập thông tin mới.</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Thông tin hiện tại</div>
+        <div class="field">
+          <label>Tài khoản hiện tại</label>
+          <input id="s-cur-user" type="text" placeholder="Tài khoản đang dùng" autocomplete="off"
+            style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;transition:border-color .15s;width:100%"/>
+        </div>
+        <div class="field">
+          <label>Mật khẩu hiện tại</label>
+          <input id="s-cur-pass" type="password" placeholder="••••••••" autocomplete="current-password"
+            style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;transition:border-color .15s;width:100%"/>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Thông tin mới</div>
+        <div class="field">
+          <label>Tài khoản mới</label>
+          <input id="s-new-user" type="text" placeholder="Để trống = giữ nguyên" autocomplete="off"
+            style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;transition:border-color .15s;width:100%"/>
+        </div>
+        <div class="field">
+          <label>Mật khẩu mới</label>
+          <input id="s-new-pass" type="password" placeholder="Để trống = giữ nguyên" autocomplete="new-password"
+            style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;transition:border-color .15s;width:100%"/>
+        </div>
+        <div class="field">
+          <label>Xác nhận mật khẩu mới</label>
+          <input id="s-new-pass2" type="password" placeholder="Nhập lại mật khẩu mới" autocomplete="new-password"
+            style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;transition:border-color .15s;width:100%"/>
+        </div>
+      </div>
+      <div id="settings-err" style="font-size:12px;color:var(--red);min-height:16px;text-align:center"></div>
+      <button class="btn-primary" id="btn-settings-save">Lưu thay đổi</button>
+    </div>
+  </div>
+</div>
+<div id="img-resizer" style="display:none">
+  <button class="resizer-zoom-btn" title="Phóng to ảnh">🔍</button>
+  <div class="resizer-handle"></div>
+</div>
+
+<div id="lightbox" style="display:none">
+  <button class="lb-close">✕</button>
+  <div class="lb-controls">
+    <button id="lb-zoom-out">−</button>
+    <button id="lb-zoom-reset">100%</button>
+    <button id="lb-zoom-in">+</button>
+  </div>
+  <img id="lb-img" src="" alt="Zoomed" draggable="false"/>
+</div>
+<div id="toast"></div>
+
+<script>
+// CONFIG
+const API = '/api.php';
+
+// API CALL
+async function api(payload) {
+  const res = await fetch(API, { method: 'POST', body: JSON.stringify(payload) });
+  const data = await res.json();
+  if (data && data.error) throw new Error(data.error);
+  return data;
+}
+
+// SHA256
+
+
+// TOAST
+let _tt;
+function toast(msg, dur=2400) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_tt);
+  _tt = setTimeout(() => el.classList.remove('show'), dur);
+}
+
+// ESC HTML
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// STATE
+let notes = [], current = null, saveTimer = null, sharePerm = 'view', shareGen = false;
+let dragSrcId = null;
+
+// SHARE MODE
+async function checkShareMode() {
+// Đọc token từ /tab/slug hoặc fallback ?n=slug
+  const _pathMatch = location.pathname.match(/\/tab\/([^\/]+)/);
+  const token = _pathMatch ? _pathMatch[1] : new URLSearchParams(location.search).get('n');
+  if (!token) return false;
+  document.getElementById('login-screen').style.display = 'none';
+  const screen = document.getElementById('share-screen');
+  screen.style.display = 'flex';
+  document.getElementById('share-body').innerHTML = '<div style="padding:48px;text-align:center"><div class="spin" style="margin:auto"></div></div>';
+  try {
+    const note = await api({ action: 'getByToken', token });
+    if (note.error || !note.id) {
+      document.getElementById('share-body').innerHTML = '<p style="color:var(--text-3);padding:40px 0">🔒 Ghi chú ở trạng thái riêng tư.</p>';
+      return true;
+    }
+    const pill = document.getElementById('share-pill');
+    if (note.share_perm === 'edit') { pill.textContent = '✏️ Có thể sửa'; pill.classList.add('edit'); }
+    const body = document.getElementById('share-body');
+    if (note.share_perm === 'view') {
+      body.innerHTML = `<h1 style="font-family:var(--serif);font-size:28px;font-weight:300;margin-bottom:24px">${esc(note.title)}</h1><div class="rendered">${note.content||''}</div>`;
+    } else {
+      body.innerHTML = `
+        <input id="s-title" value="${esc(note.title)}" style="width:100%;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text);font-family:var(--serif);font-size:26px;font-weight:300;padding:0 0 14px;outline:none;margin-bottom:24px"/>
+        <div id="s-editor" contenteditable="true" style="outline:none;font-family:var(--mono);font-size:14px;line-height:1.85;min-height:400px;color:var(--text)"></div>`;
+      const ed = document.getElementById('s-editor');
+      ed.innerHTML = note.content || '';
+      setupPaste(ed);
+      // Hiện nút lưu trên thanh header
+      const sSave = document.getElementById('s-save');
+      const sSt   = document.getElementById('s-st');
+      sSave.style.display = 'block';
+      async function doShareSave() {
+        if (sSave.disabled) return;
+        sSave.disabled = true; sSave.textContent = '⏳ Đang lưu...';
+        sSt.textContent = '';
+        try {
+          await api({ action: 'updateNote', id: note.id, title: document.getElementById('s-title').value, content: ed.innerHTML });
+          sSave.textContent = '✓ Đã lưu';
+          sSt.style.color = 'var(--green)'; sSt.textContent = 'Đã lưu lúc ' + new Date().toLocaleTimeString('vi-VN');
+          setTimeout(() => { sSave.textContent = '💾 Lưu thay đổi'; sSave.disabled = false; }, 2000);
+        } catch(e) {
+          sSave.textContent = '✕ Lỗi'; sSt.style.color = 'var(--red)'; sSt.textContent = e.message;
+          setTimeout(() => { sSave.textContent = '💾 Lưu thay đổi'; sSave.disabled = false; }, 2500);
+        }
+      }
+      sSave.onclick = doShareSave;
+      document.addEventListener('keydown', function shareSaveHotkey(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+          e.preventDefault();
+          doShareSave();
+        }
+      });
+    }
+  } catch(e) {
+    document.getElementById('share-body').innerHTML = `<p style="color:var(--red);padding:40px 0">Lỗi: ${esc(e.message)}</p>`;
+  }
+  return true;
+}
+
+// LOGIN
+// LOGIN
+async function doLogin() {
+  const user  = document.getElementById('inp-user').value.trim();
+  const pass  = document.getElementById('inp-pass').value; // Lấy mật khẩu gốc
+  const errEl = document.getElementById('login-err');
+  const btn   = document.getElementById('btn-login');
+  
+  if (!user || !pass) { errEl.textContent = 'Vui lòng nhập đầy đủ.'; return; }
+  
+  btn.textContent = 'Đang xác thực...'; btn.disabled = true; errEl.textContent = '';
+  
+  try {
+    // Gửi trực tiếp pass lên server, KHÔNG dùng biến hash nữa
+    const res = await api({ action: 'login', username: user, passwordHash: pass });
+    
+    if (!res.success) {
+      errEl.textContent = 'Sai tài khoản hoặc mật khẩu.';
+      btn.textContent = 'Đăng nhập'; btn.disabled = false; return;
+    }
+    
+    sessionStorage.setItem('gn_auth', '1');
+    showApp();
+  } catch(e) {
+    errEl.textContent = 'Lỗi kết nối: ' + e.message;
+    btn.textContent = 'Đăng nhập'; btn.disabled = false;
+  }
+}
+
+document.getElementById('btn-login').addEventListener('click', doLogin);
+document.getElementById('inp-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.getElementById('inp-user').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('inp-pass').focus(); });
+
+// SHOW APP
+async function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  await loadNotes();
+}
+
+// LOAD NOTES
+async function loadNotes() {
+  const list = document.getElementById('note-list');
+  list.innerHTML = '<div style="padding:32px;text-align:center"><div class="spin" style="margin:auto"></div></div>';
+  try {
+    const data = await api({ action: 'getNotes' });
+    notes = Array.isArray(data) ? data : [];
+    // Sort theo sort_order nếu có, fallback theo updated_at
+    notes.sort((a,b) => {
+      if (a.sort_order !== undefined && b.sort_order !== undefined) return a.sort_order - b.sort_order;
+      return new Date(b.updated_at) - new Date(a.updated_at);
+    });
+    renderList();
+  } catch(e) {
+    list.innerHTML = `<div class="list-empty" style="color:var(--red)">Lỗi tải:<br>${esc(e.message)}</div>`;
+  }
+}
+
+// RENDER LIST
+function renderList(filter='') {
+  const list = document.getElementById('note-list');
+  const q = (filter||'').toLowerCase();
+  const filtered = notes.filter(n => (n.title||'').toLowerCase().includes(q));
+  if (!filtered.length) {
+    list.innerHTML = `<div class="list-empty">Không có ghi chú${filter?' phù hợp':''}</div>`;
+    return;
+  }
+  list.innerHTML = '';
+  filtered.forEach(n => {
+    const d = new Date(n.updated_at);
+    const ds = d.toLocaleDateString('vi-VN', {day:'2-digit',month:'2-digit',year:'numeric'});
+    const div = document.createElement('div');
+    div.className = 'note-item' + (current && current.id === n.id ? ' active' : '');
+    div.dataset.id = n.id;
+    div.draggable = true;
+    div.innerHTML = `
+      <span class="drag-handle" title="Kéo để sắp xếp">⠿</span>
+      <div class="note-item-info">
+        <div class="note-title">${esc(n.title||'Không có tiêu đề')}</div>
+        <div class="note-date">${ds}</div>
+      </div>
+      <button class="note-del" title="Xóa">✕</button>`;
+    div.addEventListener('click', e => {
+      if (e.target.classList.contains('note-del') || e.target.classList.contains('drag-handle')) return;
+      openNote(n);
+    });
+    div.querySelector('.note-del').addEventListener('click', e => { e.stopPropagation(); deleteNote(n); });
+
+    // Drag events
+    div.addEventListener('dragstart', e => {
+      dragSrcId = n.id;
+      div.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    div.addEventListener('dragend', () => {
+      div.classList.remove('dragging');
+      document.querySelectorAll('.note-item').forEach(el => el.classList.remove('drag-over'));
+    });
+    div.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      document.querySelectorAll('.note-item').forEach(el => el.classList.remove('drag-over'));
+      if (n.id !== dragSrcId) div.classList.add('drag-over');
+    });
+    div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+    div.addEventListener('drop', e => {
+      e.preventDefault();
+      div.classList.remove('drag-over');
+      if (!dragSrcId || dragSrcId === n.id) return;
+      const srcIdx = notes.findIndex(x => x.id === dragSrcId);
+      const dstIdx = notes.findIndex(x => x.id === n.id);
+      if (srcIdx === -1 || dstIdx === -1) return;
+      const [moved] = notes.splice(srcIdx, 1);
+      notes.splice(dstIdx, 0, moved);
+      notes.forEach((note, i) => { note.sort_order = i; });
+      renderList(document.getElementById('search-inp').value);
+      saveOrder();
+    });
+
+    list.appendChild(div);
+  });
+}
+
+// LƯU THỨ TỰ LÊN SERVER
+async function saveOrder() {
+  try {
+    const order = notes.map((n, i) => ({ id: n.id, sort_order: i }));
+    await api({ action: 'reorderNotes', order });
+  } catch(e) { toast('Lỗi lưu thứ tự: ' + e.message); }
+}
+
+// CREATE
+document.getElementById('btn-new').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-new');
+  btn.disabled = true;
+  try {
+    const res = await api({ action: 'createNote', title: 'Ghi chú mới', content: '' });
+    const n = { id: res.id, title: 'Ghi chú mới', content: '', created_at: res.created_at, updated_at: res.created_at };
+    notes.unshift(n);
+    renderList(document.getElementById('search-inp').value);
+    openNote(n);
+    setTimeout(() => { const t = document.getElementById('note-title-inp'); t.focus(); t.select(); }, 50);
+  } catch(e) { toast('Lỗi tạo ghi chú: ' + e.message); }
+  btn.disabled = false;
+});
+
+// DELETE
+async function deleteNote(n) {
+  if (!confirm(`Xóa "${n.title}"?`)) return;
+  try {
+    await api({ action: 'deleteNote', id: n.id });
+    notes = notes.filter(x => x.id !== n.id);
+    if (current && current.id === n.id) {
+      current = null;
+      const panel = document.getElementById('editor-panel');
+      panel.style.display = 'none';
+      panel.classList.remove('active');
+      document.getElementById('empty-state').style.display = 'flex';
+    }
+    renderList(document.getElementById('search-inp').value);
+    toast('Đã xóa ghi chú');
+  } catch(e) { toast('Lỗi xóa: ' + e.message); }
+}
+
+// SAVE
+function setSaveInd(cls, txt) {
+  // Không dùng nữa — giữ lại để tránh lỗi nếu còn gọi ở chỗ khác
+}
+function setLastSaved() {
+  const el = document.getElementById('save-ind');
+  const t  = new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  el.className = 'save-indicator saved';
+  el.textContent = 'Đã lưu lúc ' + t;
+}
+function setSaveError() {
+  const el = document.getElementById('save-ind');
+  el.className = 'save-indicator error';
+  el.textContent = 'Lỗi lưu';
+}
+
+function triggerSave() {
+  if (!current) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const title   = document.getElementById('note-title-inp').value || 'Không có tiêu đề';
+    const content = document.getElementById('editor').innerHTML;
+    try {
+      await api({ action: 'updateNote', id: current.id, title, content });
+      current.title = title; current.content = content;
+      current.updated_at = new Date().toISOString();
+      const idx = notes.findIndex(n => n.id === current.id);
+      if (idx !== -1) notes[idx] = {...notes[idx], title, content, updated_at: current.updated_at};
+      renderList(document.getElementById('search-inp').value);
+      setLastSaved();
+    } catch(e) { setSaveError(); }
+  }, 1000);
+}
+
+document.getElementById('note-title-inp').addEventListener('input', triggerSave);
+document.getElementById('editor').addEventListener('input', triggerSave);
+
+// ===== TOOLBAR HANDLERS =====
+(function() {
+  const editor = document.getElementById('editor');
+
+  // savedRange: chỉ dùng cho các trường hợp PHẢI rời khỏi editor (prompt, file picker)
+  let savedRange = null;
+  function snapSelection() {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const r = sel.getRangeAt(0);
+      if (editor.contains(r.commonAncestorContainer)) {
+        savedRange = r.cloneRange();
+      }
+    }
+  }
+  function applyRange() {
+    if (!savedRange) return false;
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedRange);
+    return true;
+  }
+
+  // ---- Font size ----
+  // mousedown lưu selection TRƯỚC KHI select mở ra
+  const selFs = document.getElementById('sel-fontsize');
+  selFs.addEventListener('mousedown', snapSelection);
+  selFs.addEventListener('change', function() {
+    applyRange();
+    editor.focus();
+    const size = this.value;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    if (sel.isCollapsed) { editor.style.fontSize = size; return; }
+    // Bọc selection trong <span style="font-size:...">
+    const range = sel.getRangeAt(0);
+    const span = document.createElement('span');
+    span.style.fontSize = size;
+    try { range.surroundContents(span); }
+    catch(_) {
+      // surroundContents fails on partial selections — dùng execCommand fallback
+      document.execCommand('fontSize', false, '7');
+      editor.querySelectorAll('font[size="7"]').forEach(el => {
+        const s = document.createElement('span');
+        s.style.fontSize = size;
+        s.innerHTML = el.innerHTML;
+        el.replaceWith(s);
+      });
+    }
+    triggerSave();
+  });
+
+  // ---- Nút format chính ----
+  document.querySelectorAll('.tb-btn[data-cmd]').forEach(btn => {
+    btn.addEventListener('mousedown', function(e) {
+      // preventDefault giữ nguyên selection trong editor
+      e.preventDefault();
+      const cmd = this.dataset.cmd;
+      editor.focus();
+
+      if (cmd === 'bold')          { document.execCommand('bold',          false, null); triggerSave(); return; }
+      if (cmd === 'italic')        { document.execCommand('italic',        false, null); triggerSave(); return; }
+      if (cmd === 'strikethrough') { document.execCommand('strikeThrough', false, null); triggerSave(); return; }
+
+      if (cmd === 'link') {
+        // 1. Snap selection ngay bây giờ (focus vẫn trong editor)
+        snapSelection();
+        const selText = window.getSelection().toString().trim();
+        const isOnLink = !!window.getSelection().anchorNode?.parentElement?.closest('a');
+
+        // 2. Nếu đang đứng trong link → gỡ link
+        if (isOnLink) {
+          document.execCommand('unlink', false, null);
+          triggerSave(); return;
+        }
+
+        // 3. Mở prompt (editor mất focus tại đây)
+        const url = prompt('Nhập URL (để trống để gỡ link):', 'https://');
+        if (url === null) return;
+
+        // 4. Khôi phục selection rồi mới thao tác DOM
+        applyRange();
+        editor.focus();
+
+        if (!url.trim()) { document.execCommand('unlink', false, null); triggerSave(); return; }
+
+        const fullUrl = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+        if (selText) {
+          document.execCommand('createLink', false, fullUrl);
+          // gán target=_blank cho link vừa tạo
+          editor.querySelectorAll('a').forEach(a => {
+            if (a.href === fullUrl) a.target = '_blank';
+          });
+        } else {
+          // Không có text chọn → chèn link dạng text
+          const a = document.createElement('a');
+          a.href = fullUrl; a.target = '_blank'; a.textContent = fullUrl;
+          const range = window.getSelection().getRangeAt(0);
+          range.deleteContents();
+          range.insertNode(a);
+          // Đặt cursor sau link
+          range.setStartAfter(a); range.collapse(true);
+          window.getSelection().removeAllRanges();
+          window.getSelection().addRange(range);
+        }
+        triggerSave(); return;
+      }
+
+      if (cmd === 'uploadImage') {
+        snapSelection();
+        document.getElementById('img-file-inp').click();
+        return;
+      }
+    });
+  });
+
+  // Click vào link trong editor → hiện tooltip
+  editor.addEventListener('click', function(e) {
+    const a = e.target.closest('a');
+    if (!a) { removeLinkTooltip(); return; }
+    e.preventDefault();
+    showLinkTooltip(a);
+  });
+
+  function removeLinkTooltip() {
+    document.getElementById('link-tooltip')?.remove();
+  }
+  function showLinkTooltip(aEl) {
+    removeLinkTooltip();
+    const tip = document.createElement('div');
+    tip.id = 'link-tooltip';
+    tip.innerHTML = `
+      <a href="${aEl.href}" target="_blank" class="tip-href">${aEl.href}</a>
+      <button class="tip-btn" id="tip-edit">✎</button>
+      <button class="tip-btn danger" id="tip-unlink">✕</button>
+    `;
+    document.body.appendChild(tip);
+
+    // Định vị theo link
+    const r = aEl.getBoundingClientRect();
+    tip.style.left = Math.min(r.left, window.innerWidth - tip.offsetWidth - 8) + 'px';
+    tip.style.top  = (r.bottom + 6) + 'px';
+
+    tip.querySelector('#tip-edit').addEventListener('click', () => {
+      removeLinkTooltip();
+      const newUrl = prompt('Sửa URL:', aEl.href);
+      if (newUrl && newUrl.trim()) { aEl.href = newUrl.trim(); triggerSave(); }
+    });
+    tip.querySelector('#tip-unlink').addEventListener('click', () => {
+      removeLinkTooltip();
+      // Unwrap <a> giữ nội dung
+      const parent = aEl.parentNode;
+      while (aEl.firstChild) parent.insertBefore(aEl.firstChild, aEl);
+      parent.removeChild(aEl);
+      triggerSave();
+    });
+
+    // Đóng khi click ngoài
+    setTimeout(() => {
+      document.addEventListener('mousedown', function handler(ev) {
+        if (!tip.contains(ev.target)) { removeLinkTooltip(); document.removeEventListener('mousedown', handler); }
+      });
+    }, 0);
+  }
+
+  // ---- Upload ảnh ----
+  document.getElementById('img-file-inp').addEventListener('change', async function() {
+    const file = this.files[0];
+    if (!file) return;
+    this.value = '';
+    applyRange();
+    editor.focus();
+    const ph = document.createElement('div');
+    ph.className = 'img-uploading';
+    ph.textContent = '⏳ Đang tải ảnh lên Storage...';
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount) {
+      const r = sel.getRangeAt(0); r.collapse(false); r.insertNode(ph);
+    } else { editor.appendChild(ph); }
+    try {
+      const b64 = await blobToB64(file);
+      const res = await api({ action: 'uploadImage', base64: b64.split(',')[1], mimeType: file.type, filename: 'img_'+Date.now()+'.png' });
+      const img = document.createElement('img');
+      img.src = res.url; img.setAttribute('referrerpolicy','no-referrer');
+      ph.replaceWith(img);
+      toast('✓ Đã chèn ảnh');
+    } catch(err) {
+      ph.textContent = '✕ Lỗi: ' + err.message;
+    }
+    triggerSave();
+  });
+
+  // ===== COLOR / HIGHLIGHT PICKER =====
+  const FG_COLORS = [
+    '#f87171','#ef4444','#fb923c','#f97316',
+    '#fbbf24','#eab308','#4ade80','#22c55e',
+    '#34d399','#10b981','#38bdf8','#0ea5e9',
+    '#818cf8','#6366f1','#e879f9','#d946ef',
+    '#f9a8d4','#fb7185','#ffffff','#94a3b8'
+  ];
+  const BG_COLORS = [
+    'rgba(248,113,113,.4)','rgba(239,68,68,.35)',
+    'rgba(251,146,60,.4)','rgba(249,115,22,.35)',
+    'rgba(251,191,36,.45)','rgba(234,179,8,.4)',
+    'rgba(74,222,128,.35)','rgba(34,197,94,.3)',
+    'rgba(52,211,153,.35)','rgba(16,185,129,.3)',
+    'rgba(56,189,248,.35)','rgba(14,165,233,.3)',
+    'rgba(129,140,248,.35)','rgba(99,102,241,.3)',
+    'rgba(232,121,249,.35)','rgba(217,70,239,.3)',
+    'rgba(249,168,212,.35)','rgba(251,113,133,.3)',
+    'rgba(255,255,255,.18)','rgba(148,163,184,.28)'
+  ];
+
+  function positionPop(btn, pop) {
+    // Tính toán vị trí popup theo fixed, tránh tràn màn hình
+    const r = btn.getBoundingClientRect();
+    const popW = 236, popH = 180;
+    let left = r.left;
+    let top  = r.bottom + 6;
+    if (left + popW > window.innerWidth - 8) left = window.innerWidth - popW - 8;
+    if (left < 8) left = 8;
+    if (top + popH > window.innerHeight - 8) top = r.top - popH - 6;
+    pop.style.left = left + 'px';
+    pop.style.top  = top  + 'px';
+  }
+
+  function closeAllPickers() {
+    document.getElementById('pop-fgcolor').classList.remove('open');
+    document.getElementById('pop-bgcolor').classList.remove('open');
+  }
+
+  function buildSwatches(containerId, colors, applyFn, barId) {
+    const wrap = document.getElementById(containerId);
+    const clear = document.createElement('div');
+    clear.className = 'swatch clear'; clear.title = 'Xóa màu'; clear.textContent = '✕';
+    clear.addEventListener('mousedown', e => {
+      e.preventDefault(); applyRange(); editor.focus();
+      applyFn(null); closeAllPickers(); triggerSave();
+    });
+    wrap.appendChild(clear);
+    colors.forEach(color => {
+      const s = document.createElement('div');
+      s.className = 'swatch'; s.style.background = color;
+      s.addEventListener('mousedown', e => {
+        e.preventDefault(); applyRange(); editor.focus();
+        applyFn(color);
+        document.getElementById(barId).style.background = color;
+        closeAllPickers(); triggerSave();
+      });
+      wrap.appendChild(s);
+    });
+  }
+
+  buildSwatches('sw-fg', FG_COLORS, color => {
+    if (color) document.execCommand('foreColor', false, color);
+    else document.execCommand('removeFormat', false, null);
+  }, 'fgcolor-bar');
+
+  buildSwatches('sw-bg', BG_COLORS, color => {
+    if (color) document.execCommand('hiliteColor', false, color);
+    else document.execCommand('hiliteColor', false, 'transparent');
+  }, 'bgcolor-bar');
+
+  document.getElementById('btn-fgcolor').addEventListener('mousedown', e => {
+    e.preventDefault(); snapSelection();
+    const pop = document.getElementById('pop-fgcolor');
+    const isOpen = pop.classList.contains('open');
+    closeAllPickers();
+    if (!isOpen) { positionPop(e.currentTarget, pop); pop.classList.add('open'); }
+  });
+  document.getElementById('btn-bgcolor').addEventListener('mousedown', e => {
+    e.preventDefault(); snapSelection();
+    const pop = document.getElementById('pop-bgcolor');
+    const isOpen = pop.classList.contains('open');
+    closeAllPickers();
+    if (!isOpen) { positionPop(e.currentTarget, pop); pop.classList.add('open'); }
+  });
+
+  document.addEventListener('mousedown', e => {
+    if (!e.target.closest('#pop-fgcolor, #pop-bgcolor, #btn-fgcolor, #btn-bgcolor')) {
+      closeAllPickers();
+    }
+  });
+})();
+
+// ===== MOBILE DRAWER =====
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebar-overlay').classList.add('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
+document.getElementById('btn-hamburger').addEventListener('click', openSidebar);
+document.getElementById('sidebar-overlay').addEventListener('click', closeSidebar);
+
+// ===== NÚT LƯU THỦ CÔNG =====
+async function manualSave() {
+  if (!current) return;
+  const btn = document.getElementById('btn-save-manual');
+  const title   = document.getElementById('note-title-inp').value || 'Không có tiêu đề';
+  const content = document.getElementById('editor').innerHTML;
+  clearTimeout(saveTimer);
+  btn.textContent = '⏳ Đang lưu...'; btn.className = 'btn-save-manual saving'; btn.disabled = true;
+  try {
+    await api({ action: 'updateNote', id: current.id, title, content });
+    current.title = title; current.content = content;
+    current.updated_at = new Date().toISOString();
+    const idx = notes.findIndex(n => n.id === current.id);
+    if (idx !== -1) notes[idx] = {...notes[idx], title, content, updated_at: current.updated_at};
+    renderList(document.getElementById('search-inp').value);
+    btn.textContent = '✓ Đã lưu'; btn.className = 'btn-save-manual saved';
+    setLastSaved();
+    setTimeout(() => { btn.textContent = '💾 Lưu'; btn.className = 'btn-save-manual'; btn.disabled = false; }, 2000);
+  } catch(e) {
+    btn.textContent = '✕ Lỗi'; btn.className = 'btn-save-manual error';
+    setSaveError();
+    setTimeout(() => { btn.textContent = '💾 Lưu'; btn.className = 'btn-save-manual'; btn.disabled = false; }, 2500);
+    toast('Lỗi lưu: ' + e.message);
+  }
+}
+document.getElementById('btn-save-manual').addEventListener('click', manualSave);
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); manualSave(); }
+});
+
+// Đóng sidebar khi mở note trên mobile
+function openNote(n) {
+  current = n;
+  document.getElementById('empty-state').style.display = 'none';
+  const panel = document.getElementById('editor-panel');
+  panel.style.display = 'flex';
+  panel.classList.add('active');
+  document.getElementById('note-title-inp').value = n.title || '';
+  document.getElementById('editor').innerHTML = n.content || '';
+  setSaveInd('','');
+  renderList(document.getElementById('search-inp').value);
+  if (window.innerWidth <= 768) closeSidebar();
+}
+
+// TOOLBAR
+document.querySelectorAll('.perm-opt').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    document.querySelectorAll('.perm-opt').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    sharePerm = btn.dataset.perm;
+    document.getElementById('share-link').value = 'Đang tạo link...';
+    await genShareLink(true); // <-- Sửa ở đây: Thêm tham số true
+  });
+});
+// PASTE IMAGE
+function setupPaste(el) {
+  el.addEventListener('paste', async e => {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const blob = item.getAsFile();
+        const ph = document.createElement('div');
+        ph.className = 'img-uploading';
+        ph.textContent = '⏳ Đang tải ảnh lên Storage...';
+        insertAtCursor(el, ph);
+        try {
+          const b64 = await blobToB64(blob);
+          const pure = b64.split(',')[1];
+          const res = await api({ action: 'uploadImage', base64: pure, mimeType: blob.type, filename: 'img_'+Date.now()+'.png' });
+          const img = document.createElement('img');
+          img.src = res.url;
+          img.setAttribute('referrerpolicy', 'no-referrer');
+          ph.replaceWith(img);
+          toast('✓ Đã chèn ảnh');
+        } catch(err) {
+          ph.textContent = '✕ Lỗi tải ảnh: ' + err.message;
+          toast('Lỗi ảnh: ' + err.message);
+        }
+        triggerSave();
+        break;
+      }
+    }
+  });
+}
+
+function blobToB64(blob) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = rej;
+    r.readAsDataURL(blob);
+  });
+}
+
+function insertAtCursor(el, node) {
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount && el.contains(sel.getRangeAt(0).startContainer)) {
+    const range = sel.getRangeAt(0);
+    range.deleteContents(); range.insertNode(node);
+    range.setStartAfter(node); range.collapse(true);
+    sel.removeAllRanges(); sel.addRange(range);
+  } else { el.appendChild(node); }
+}
+
+setupPaste(document.getElementById('editor'));
+
+
+// ================= XỬ LÝ SHARE (TỐI ƯU UX & LOGIC) =================
+
+// 1. Mở modal Share
+document.getElementById('btn-share').addEventListener('click', async () => {
+  if (!current) return;
+  document.getElementById('share-overlay').classList.add('open');
+  
+  const slugInp = document.getElementById('share-slug-inp');
+  const linkInp = document.getElementById('share-link');
+
+  const isPrivate = current.share_perm === 'private';
+  sharePerm = isPrivate ? 'view' : (current.share_perm || 'view');
+
+  document.querySelectorAll('.perm-opt').forEach(b => {
+    b.classList.toggle('sel', b.dataset.perm === sharePerm);
+  });
+
+  if (current.share_token) {
+    slugInp.value = current.share_token;
+    linkInp.value = `${location.origin}/tab/${current.share_token}`;
+  } else {
+    slugInp.value = '';
+    linkInp.value = 'Đang tạo link...';
+    await genShareLink();
+  }
+});
+
+// 2. Đóng Modal
+document.getElementById('btn-modal-close').addEventListener('click', () => {
+  document.getElementById('share-overlay').classList.remove('open');
+});
+
+// 3. Chọn quyền
+document.querySelectorAll('.perm-opt').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.perm-opt').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    sharePerm = btn.dataset.perm;
+  });
+});
+
+// 4. Bấm nút "Cập nhật link" (Lúc này mới gọi API)
+document.getElementById('btn-save-share').addEventListener('click', async () => {
+  document.getElementById('share-link').value = 'Đang cập nhật...';
+  await genShareLink();
+});
+
+// 5. Hàm gọi API
+async function genShareLink() {
+  if (!current) return;
+  const slugInp = document.getElementById('share-slug-inp');
+  try {
+    const res = await api({
+      action: 'createShare',
+      id: current.id,
+      perm: sharePerm,
+      slug: slugInp.value.trim()
+    });
+    current.share_token = res.token;
+    current.share_perm = sharePerm;
+    if (res.token) slugInp.value = res.token;
+    const url = `${location.origin}/tab/${res.token}`;
+    document.getElementById('share-link').value = url;
+    toast('✓ Đã cập nhật link chia sẻ');
+  } catch(e) {
+    document.getElementById('share-link').value = 'Lỗi: ' + e.message;
+  }
+}
+
+// 6. Nút Copy
+document.getElementById('btn-copy').addEventListener('click', () => {
+  navigator.clipboard.writeText(document.getElementById('share-link').value).then(() => {
+    const btn = document.getElementById('btn-copy');
+    btn.textContent = '✓ Đã sao chép'; btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'Sao chép'; btn.classList.remove('ok'); }, 2000);
+  });
+});
+// SEARCH
+document.getElementById('search-inp').addEventListener('input', e => renderList(e.target.value));
+
+// LOGOUT
+document.getElementById('btn-logout').addEventListener('click', () => {
+  sessionStorage.removeItem('gn_auth');
+  location.reload();
+});
+
+// ===== RELOAD NOTE =====
+document.getElementById('btn-reload-note').addEventListener('click', async () => {
+  if (!current) return;
+  const btn = document.getElementById('btn-reload-note');
+  btn.style.opacity = '0.4';
+  btn.style.pointerEvents = 'none';
+  try {
+    const data = await api({ action: 'getNotes' });
+    const fresh = (Array.isArray(data) ? data : []).find(n => n.id === current.id);
+    if (!fresh) { toast('Không tìm thấy ghi chú này'); return; }
+    // Cập nhật lại dữ liệu local
+    const idx = notes.findIndex(n => n.id === current.id);
+    if (idx !== -1) notes[idx] = fresh;
+    current = fresh;
+    document.getElementById('note-title-inp').value = fresh.title || '';
+    document.getElementById('editor').innerHTML = fresh.content || '';
+    setSaveInd('saved', '✓ đã tải lại');
+    setTimeout(() => setSaveInd('',''), 2000);
+    toast('✓ Đã tải lại ghi chú');
+  } catch(e) {
+    toast('Lỗi tải lại: ' + e.message);
+  } finally {
+    setTimeout(() => { btn.style.opacity = ''; btn.style.pointerEvents = ''; }, 800);
+  }
+});
+
+// ===== SETTINGS (ĐỔI TÀI KHOẢN / MẬT KHẨU) =====
+document.getElementById('btn-settings').addEventListener('click', () => {
+  // Reset form
+  ['s-cur-user','s-cur-pass','s-new-user','s-new-pass','s-new-pass2'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('settings-err').textContent = '';
+  document.getElementById('settings-overlay').classList.add('open');
+  document.getElementById('s-cur-user').focus();
+});
+
+document.getElementById('btn-settings-close').addEventListener('click', () => {
+  document.getElementById('settings-overlay').classList.remove('open');
+});
+
+document.getElementById('btn-settings-save').addEventListener('click', async () => {
+  const errEl  = document.getElementById('settings-err');
+  const btn    = document.getElementById('btn-settings-save');
+  const curUser = document.getElementById('s-cur-user').value.trim();
+  const curPass = document.getElementById('s-cur-pass').value;
+  const newUser = document.getElementById('s-new-user').value.trim();
+  const newPass = document.getElementById('s-new-pass').value;
+  const newPass2 = document.getElementById('s-new-pass2').value;
+
+  errEl.textContent = '';
+
+  if (!curUser || !curPass) { errEl.textContent = 'Vui lòng nhập tài khoản và mật khẩu hiện tại.'; return; }
+  if (!newUser && !newPass) { errEl.textContent = 'Vui lòng nhập ít nhất tài khoản mới hoặc mật khẩu mới.'; return; }
+  if (newPass && newPass !== newPass2) { errEl.textContent = 'Mật khẩu mới và xác nhận không khớp.'; return; }
+  if (newPass && newPass.length < 6) { errEl.textContent = 'Mật khẩu mới phải có ít nhất 6 ký tự.'; return; }
+
+  btn.textContent = 'Đang lưu...'; btn.disabled = true;
+
+  try {
+    const res = await api({
+      action: 'changeCredentials',
+      curUsername: curUser,
+      curPassword: curPass,
+      newUsername: newUser || null,
+      newPassword: newPass || null
+    });
+    if (res.success) {
+      toast('✓ Đã cập nhật thông tin đăng nhập');
+      document.getElementById('settings-overlay').classList.remove('open');
+    } else {
+      errEl.textContent = res.error || 'Sai tài khoản hoặc mật khẩu hiện tại.';
+    }
+  } catch(e) {
+    errEl.textContent = 'Lỗi: ' + e.message;
+  } finally {
+    btn.textContent = 'Lưu thay đổi'; btn.disabled = false;
+  }
+});
+
+// Đóng settings overlay khi click ngoài modal
+document.getElementById('settings-overlay').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+// ================= XỬ LÝ ẢNH: RESIZE & LIGHTBOX =================
+
+const resizer = document.getElementById('img-resizer');
+const lb = document.getElementById('lightbox');
+const lbImg = document.getElementById('lb-img');
+let activeImg = null;
+
+// --- 1. LOGIC RESIZER ---
+function updateResizerPos() {
+  if (!activeImg) return;
+  const rect = activeImg.getBoundingClientRect();
+  // Tính toán vị trí tuyệt đối trên toàn trang (bao gồm cả cuộn)
+  resizer.style.left = (rect.left + window.scrollX) + 'px';
+  resizer.style.top = (rect.top + window.scrollY) + 'px';
+  resizer.style.width = rect.width + 'px';
+  resizer.style.height = rect.height + 'px';
+}
+
+function hideResizer() {
+  resizer.style.display = 'none';
+  activeImg = null;
+}
+
+// Lắng nghe click trong khu vực editor để hiện khung resize
+document.addEventListener('mousedown', (e) => {
+  // Bỏ qua nếu click vào chính khung resizer
+  if (e.target.closest('#img-resizer')) return;
+
+  const isEditorImg = e.target.tagName === 'IMG' && e.target.closest('[contenteditable="true"]');
+  if (isEditorImg) {
+    activeImg = e.target;
+    resizer.style.display = 'block';
+    updateResizerPos();
+  } else {
+    hideResizer();
+  }
+});
+
+// Cập nhật khung khi cuộn hoặc thay đổi kích thước cửa sổ
+document.getElementById('editor-wrap').addEventListener('scroll', updateResizerPos);
+window.addEventListener('resize', updateResizerPos);
+
+// Nút mở Zoom trên khung Resizer
+document.querySelector('.resizer-zoom-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (activeImg) openLightbox(activeImg.src);
+});
+
+// Xử lý kéo để Resize
+let isResizing = false;
+let startX, startY, startW, startH, ratio;
+
+document.querySelector('.resizer-handle').addEventListener('mousedown', (e) => {
+  e.preventDefault(); e.stopPropagation();
+  isResizing = true;
+  startX = e.clientX;
+  startY = e.clientY;
+  const rect = activeImg.getBoundingClientRect();
+  startW = rect.width;
+  startH = rect.height;
+  ratio = startW / startH; // Giữ nguyên tỷ lệ khung hình
+  document.body.style.cursor = 'se-resize';
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isResizing || !activeImg) return;
+  const dx = e.clientX - startX;
+  
+  // Tính toán kích thước mới, giới hạn min 80px
+  let newW = Math.max(80, startW + dx);
+  let newH = newW / ratio;
+
+  activeImg.style.width = newW + 'px';
+  activeImg.style.height = newH + 'px';
+  updateResizerPos();
+});
+
+document.addEventListener('mouseup', () => {
+  if (isResizing) {
+    isResizing = false;
+    document.body.style.cursor = 'default';
+    triggerSave(); // Lưu thay đổi sau khi kéo xong
+  }
+});
+
+
+// --- 2. LOGIC LIGHTBOX (ZOOM & PAN) ---
+let lbScale = 1;
+let lbTx = 0; let lbTy = 0;
+let isPanning = false;
+let panStartX = 0; let panStartY = 0;
+
+function applyTransform(transition = true) {
+  lbImg.style.transition = transition ? 'transform 0.15s ease-out' : 'none';
+  lbImg.style.transform = `translate(${lbTx}px, ${lbTy}px) scale(${lbScale})`;
+}
+
+function openLightbox(src) {
+  lbImg.src = src;
+  lb.style.display = 'flex';
+  lbScale = 1; lbTx = 0; lbTy = 0;
+  applyTransform();
+  hideResizer();
+}
+
+function closeLightbox() {
+  lb.style.display = 'none';
+  lbImg.src = '';
+}
+
+// Click mở Lightbox cho chế độ Share (Chỉ xem)
+document.addEventListener('click', (e) => {
+  const isRenderedImg = e.target.tagName === 'IMG' && e.target.closest('.rendered');
+  if (isRenderedImg) openLightbox(e.target.src);
+});
+
+// Các nút điều khiển Lightbox
+document.querySelector('.lb-close').addEventListener('click', closeLightbox);
+document.getElementById('lb-zoom-in').addEventListener('click', () => { lbScale = Math.min(lbScale + 0.5, 5); applyTransform(); });
+document.getElementById('lb-zoom-out').addEventListener('click', () => { lbScale = Math.max(lbScale - 0.5, 0.5); applyTransform(); });
+document.getElementById('lb-zoom-reset').addEventListener('click', () => { lbScale = 1; lbTx = 0; lbTy = 0; applyTransform(); });
+
+// Đóng khi click ra vùng tối ngoài ảnh
+lb.addEventListener('mousedown', (e) => {
+  if (e.target === lb) closeLightbox();
+});
+
+// Lăn chuột để Zoom
+lb.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const delta = e.deltaY < 0 ? 0.2 : -0.2;
+  lbScale = Math.min(Math.max(0.5, lbScale + delta), 6); // Min 0.5x, Max 6x
+  applyTransform();
+});
+
+// Kéo thả (Pan) ảnh khi đang zoom
+lbImg.addEventListener('mousedown', (e) => {
+  e.preventDefault();
+  isPanning = true;
+  panStartX = e.clientX - lbTx;
+  panStartY = e.clientY - lbTy;
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isPanning) return;
+  lbTx = e.clientX - panStartX;
+  lbTy = e.clientY - panStartY;
+  applyTransform(false); // Tắt transition khi drag để chuột ko bị trễ
+});
+
+document.addEventListener('mouseup', () => {
+  isPanning = false;
+});
+// INIT
+(async () => {
+  const isShare = await checkShareMode();
+  if (isShare) return;
+  if (sessionStorage.getItem('gn_auth') === '1') showApp();
+})();
+</script>
+</body>
+</html>
