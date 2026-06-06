@@ -1310,7 +1310,6 @@ function renderKanbanBoard() {
     const colEl = document.createElement('div');
     colEl.className = 'kanban-column';
     colEl.dataset.id = col.id;
-    colEl.draggable = true;
     
     const colCards = data.cards
       .filter(c => c.column_id === col.id)
@@ -1360,6 +1359,11 @@ function renderKanbanBoard() {
       </div>
       <button class="btn-add-card" data-col-id="${col.id}">+ Thêm thẻ</button>
     `;
+    
+    const dragHandle = colEl.querySelector('.column-drag-handle');
+    dragHandle.addEventListener('mousedown', () => { colEl.draggable = true; });
+    dragHandle.addEventListener('mouseup', () => { colEl.draggable = false; });
+    dragHandle.addEventListener('dragend', () => { colEl.draggable = false; });
     
     // Bind col header clicks to rename
     colEl.querySelector('.column-info').onclick = () => openColumnModal(col);
@@ -1429,9 +1433,6 @@ function renderKanbanBoard() {
 let dragColId = null;
 function setupColumnDragDrop(el, colId) {
   el.addEventListener('dragstart', e => {
-    if (!e.target.closest('.column-header') && !e.target.classList.contains('column-drag-handle')) {
-      e.preventDefault(); return;
-    }
     dragColId = colId;
     el.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
@@ -1491,17 +1492,33 @@ function setupCardDragDrop(el, cardId) {
     if (!dragCardId || dragCardId === cardId) return;
     
     const data = getActiveKanbanData();
-    const srcIdx = data.cards.findIndex(x => x.id === dragCardId);
-    const dstIdx = data.cards.findIndex(x => x.id === cardId);
+    const movedCard = data.cards.find(x => x.id === dragCardId);
+    const targetCard = data.cards.find(x => x.id === cardId);
     
-    if (srcIdx !== -1 && dstIdx !== -1) {
-      const movedCard = data.cards[srcIdx];
-      const targetCard = data.cards[dstIdx];
-      movedCard.column_id = targetCard.column_id;
-      data.cards.splice(srcIdx, 1);
-      const newDstIdx = data.cards.findIndex(x => x.id === cardId);
-      data.cards.splice(newDstIdx, 0, movedCard);
-      reorderCardsInColumns();
+    if (movedCard && targetCard) {
+      const oldColId = movedCard.column_id;
+      const newColId = targetCard.column_id;
+      
+      movedCard.column_id = newColId;
+      
+      const targetColCards = data.cards.filter(c => c.column_id === newColId && c.id !== dragCardId);
+      targetColCards.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+      
+      const targetIdx = targetColCards.findIndex(c => c.id === cardId);
+      if (targetIdx !== -1) {
+        targetColCards.splice(targetIdx, 0, movedCard);
+      } else {
+        targetColCards.push(movedCard);
+      }
+      
+      targetColCards.forEach((c, idx) => { c.sort_order = idx; });
+      
+      if (oldColId !== newColId) {
+        const srcColCards = data.cards.filter(c => c.column_id === oldColId && c.id !== dragCardId);
+        srcColCards.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+        srcColCards.forEach((c, idx) => { c.sort_order = idx; });
+      }
+      
       renderKanbanBoard();
       triggerSaveKanban();
     }
@@ -1922,6 +1939,13 @@ async function checkShareMode() {
         `;
 
         if (note.share_perm === 'edit') {
+          const dragHandle = colEl.querySelector('.column-drag-handle');
+          if (dragHandle) {
+            dragHandle.addEventListener('mousedown', () => { colEl.draggable = true; });
+            dragHandle.addEventListener('mouseup', () => { colEl.draggable = false; });
+            dragHandle.addEventListener('dragend', () => { colEl.draggable = false; });
+          }
+
           colEl.querySelector('.col-edit').onclick = (e) => { e.stopPropagation(); openSharedColumnModal(col); };
           colEl.querySelector('.col-del').onclick = (e) => { e.stopPropagation(); deleteSharedColumn(col.id); };
           colEl.querySelector('.btn-add-card').onclick = (e) => { e.stopPropagation(); openSharedCardModal(null, col.id); };
@@ -1992,9 +2016,6 @@ async function checkShareMode() {
 
     function setupSharedColumnDragDrop(el, colId) {
       el.addEventListener('dragstart', e => {
-        if (!e.target.closest('.column-header') && !e.target.classList.contains('column-drag-handle')) {
-          e.preventDefault(); return;
-        }
         dragColId = colId;
         el.classList.add('dragging');
       });
@@ -2044,16 +2065,34 @@ async function checkShareMode() {
         el.classList.remove('drag-over');
         e.stopPropagation();
         if (!dragCardId || dragCardId === cardId) return;
-        const srcIdx = note.kanban_data.cards.findIndex(x => x.id === dragCardId);
-        const dstIdx = note.kanban_data.cards.findIndex(x => x.id === cardId);
-        if (srcIdx !== -1 && dstIdx !== -1) {
-          const movedCard = note.kanban_data.cards[srcIdx];
-          const targetCard = note.kanban_data.cards[dstIdx];
-          movedCard.column_id = targetCard.column_id;
-          note.kanban_data.cards.splice(srcIdx, 1);
-          const newDstIdx = note.kanban_data.cards.findIndex(x => x.id === cardId);
-          note.kanban_data.cards.splice(newDstIdx, 0, movedCard);
-          reorderSharedCards();
+        
+        const movedCard = note.kanban_data.cards.find(x => x.id === dragCardId);
+        const targetCard = note.kanban_data.cards.find(x => x.id === cardId);
+        
+        if (movedCard && targetCard) {
+          const oldColId = movedCard.column_id;
+          const newColId = targetCard.column_id;
+          
+          movedCard.column_id = newColId;
+          
+          const targetColCards = note.kanban_data.cards.filter(c => c.column_id === newColId && c.id !== dragCardId);
+          targetColCards.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+          
+          const targetIdx = targetColCards.findIndex(c => c.id === cardId);
+          if (targetIdx !== -1) {
+            targetColCards.splice(targetIdx, 0, movedCard);
+          } else {
+            targetColCards.push(movedCard);
+          }
+          
+          targetColCards.forEach((c, idx) => { c.sort_order = idx; });
+          
+          if (oldColId !== newColId) {
+            const srcColCards = note.kanban_data.cards.filter(c => c.column_id === oldColId && c.id !== dragCardId);
+            srcColCards.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+            srcColCards.forEach((c, idx) => { c.sort_order = idx; });
+          }
+          
           renderSharedKanbanBoard();
         }
         dragCardId = null;
