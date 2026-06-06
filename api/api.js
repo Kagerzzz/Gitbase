@@ -94,7 +94,7 @@ export default async function handler(req, res) {
     if (action === 'getNotes') {
       const { data: notes, error } = await db
         .from('notes')
-        .select('id,title,content,created_at,updated_at,share_token,share_perm,sort_order')
+        .select('id,title,content,created_at,updated_at,share_token,share_perm,sort_order,default_view,kanban_data')
         .order('sort_order', { ascending: true })
         .order('updated_at', { ascending: false });
 
@@ -125,7 +125,9 @@ export default async function handler(req, res) {
         updated_at: now,
         share_token: '',
         share_perm: '',
-        sort_order
+        sort_order,
+        default_view: 'note',
+        kanban_data: null
       });
       if (error) throw error;
       return json(res, { id, created_at: now });
@@ -133,13 +135,17 @@ export default async function handler(req, res) {
 
     if (action === 'updateNote') {
       const id = data.id || '';
-      const title = data.title || '';
-      const content = data.content || '';
       const now = nowISO();
+
+      const updateData = { updated_at: now };
+      if (data.title !== undefined) updateData.title = data.title;
+      if (data.content !== undefined) updateData.content = data.content;
+      if (data.default_view !== undefined) updateData.default_view = data.default_view;
+      if (data.kanban_data !== undefined) updateData.kanban_data = data.kanban_data;
 
       const { data: rows, error } = await db
         .from('notes')
-        .update({ title, content, updated_at: now })
+        .update(updateData)
         .eq('id', id)
         .select('id');
       if (error) throw error;
@@ -184,7 +190,7 @@ export default async function handler(req, res) {
       const token = data.token || '';
       const { data: note, error } = await db
         .from('notes')
-        .select('id,title,content,share_perm')
+        .select('id,title,content,share_perm,default_view,kanban_data')
         .eq('share_token', token)
         .neq('share_token', '')
         .neq('share_perm', 'private')
