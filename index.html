@@ -516,6 +516,364 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
   line-height: 1; user-select: none;
 }
 .note-item:hover .drag-handle { opacity: 1; }
+
+/* ===== VIEW SWITCHER ===== */
+.view-switcher-bar {
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px;
+  height: 40px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.switcher-tabs {
+  display: flex;
+  gap: 4px;
+  height: 100%;
+  align-items: flex-end;
+}
+.switch-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .15s;
+  height: 30px;
+}
+.switch-tab:hover {
+  color: var(--text);
+  background: var(--surface2);
+}
+.switch-tab.active {
+  background: var(--bg);
+  border-color: var(--border);
+  color: var(--accent);
+  font-weight: 500;
+}
+.tab-default-pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--border2);
+  font-size: 9px;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: all .15s;
+}
+.tab-default-pin:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.tab-default-pin.is-default {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* ===== KANBAN BOARD ===== */
+#kanban-wrap {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 20px;
+  background: var(--bg);
+  height: calc(100vh - 140px);
+}
+#kanban-board {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  height: 100%;
+}
+.kanban-column {
+  width: 280px;
+  min-width: 280px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  transition: border-color .15s, box-shadow .15s;
+}
+.kanban-column.drag-over {
+  border-color: var(--accent);
+  box-shadow: 0 0 8px var(--accent-dim);
+}
+.kanban-column.dragging {
+  opacity: 0.4;
+}
+.column-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.column-drag-handle {
+  cursor: grab;
+  color: var(--text-3);
+  font-size: 13px;
+  user-select: none;
+}
+.column-info {
+  flex: 1;
+  min-width: 0;
+}
+.column-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.column-code {
+  font-size: 9px;
+  color: var(--text-3);
+  text-transform: uppercase;
+}
+.column-actions {
+  display: flex;
+  gap: 2px;
+}
+.col-act-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 11px;
+  transition: all .12s;
+}
+.col-act-btn:hover {
+  color: var(--text);
+  background: var(--surface2);
+}
+.col-act-btn.col-del:hover {
+  color: var(--red);
+  background: rgba(248, 113, 113, 0.1);
+}
+.card-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 50px;
+}
+.btn-add-card {
+  margin: 6px 8px 10px;
+  padding: 6px;
+  background: var(--surface2);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  text-align: center;
+  transition: all .12s;
+}
+.btn-add-card:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+.kanban-add-column-btn {
+  width: 280px;
+  min-width: 280px;
+  background: rgba(20, 22, 24, 0.3);
+  border: 1px dashed var(--border2);
+  border-radius: 10px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 12px;
+  transition: all .12s;
+}
+.kanban-add-column-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* ===== CARDS ===== */
+.kanban-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all .12s;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+.kanban-card:hover {
+  border-color: var(--border2);
+  transform: translateY(-1px);
+}
+.kanban-card.drag-over {
+  border-top: 3px solid var(--accent);
+}
+.kanban-card.dragging {
+  opacity: 0.4;
+}
+.card-drag-handle {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  color: var(--text-3);
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity .12s;
+  cursor: grab;
+}
+.kanban-card:hover .card-drag-handle {
+  opacity: 1;
+}
+.card-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  padding-right: 12px;
+}
+.card-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  word-break: break-word;
+}
+.card-code {
+  font-size: 9px;
+  color: var(--amber);
+  text-transform: uppercase;
+  background: rgba(251, 191, 36, 0.1);
+  padding: 1px 3px;
+  border-radius: 2px;
+  font-weight: 600;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.card-desc-preview {
+  font-size: 11px;
+  color: var(--text-3);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+.card-cover-thumbnails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.card-thumb {
+  width: 48px;
+  height: 36px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+/* ===== CARD DETAILS MODAL IMAGES ===== */
+#card-img-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  min-height: 40px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+}
+.card-img-item {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border2);
+  cursor: pointer;
+}
+.card-img-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.card-img-item-del {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: rgba(248, 113, 113, 0.9);
+  color: #000;
+  border: none;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  font-size: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .12s;
+}
+.card-img-item-del:hover {
+  background: #f87171;
+}
+
+/* ===== CONDITIONAL VISIBILITY IN KANBAN MODE ===== */
+#editor-panel.kanban-active #editor-tools,
+#editor-panel.kanban-active #tb-sep-first,
+#editor-panel.kanban-active #editor-wrap {
+  display: none !important;
+}
+#editor-panel.kanban-active #kanban-wrap {
+  display: block !important;
+}
+
+/* ===== SHARED KANBAN BOARD ===== */
+.kanban-board-shared {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  height: 100%;
+}
+#s-kanban-wrap {
+  display: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 16px;
+  min-height: 450px;
+  height: calc(100vh - 160px);
+}
 </style>
 </head>
 <body>
@@ -586,58 +944,82 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
         <div class="empty-hint">Chọn hoặc tạo ghi chú mới</div>
       </div>
       <div id="editor-panel">
+        <!-- View Switcher -->
+        <div class="view-switcher-bar">
+          <div class="switcher-tabs">
+            <button class="switch-tab active" data-view="note" id="tab-note">
+              <span>📝 Ghi chú</span>
+              <span class="tab-default-pin" title="Đặt làm mặc định" data-pin="note">✓</span>
+            </button>
+            <button class="switch-tab" data-view="kanban" id="tab-kanban">
+              <span>📋 Bảng (Kanban)</span>
+              <span class="tab-default-pin" title="Đặt làm mặc định" data-pin="kanban">✓</span>
+            </button>
+          </div>
+        </div>
+
         <!-- TOOLBAR: Title trái, format phải, 1 hàng -->
         <div class="toolbar">
           <input id="note-title-inp" placeholder="Tiêu đề..."/>
-          <div class="tb-sep"></div>
-          <button class="tb-btn" data-cmd="bold"           title="In đậm"><b>B</b></button>
-          <button class="tb-btn" data-cmd="italic"         title="In nghiêng"><i>I</i></button>
-          <button class="tb-btn" data-cmd="strikethrough"  title="Gạch ngang"><s>S</s></button>
-          <div class="tb-sep"></div>
-          <div class="tb-select-wrap" title="Cỡ chữ">
-            <select id="sel-fontsize" class="tb-select">
-              <option value="10px">10</option>
-              <option value="12px">12</option>
-              <option value="14px" selected>14</option>
-              <option value="16px">16</option>
-              <option value="18px">18</option>
-              <option value="22px">22</option>
-              <option value="28px">28</option>
-              <option value="36px">36</option>
-            </select>
-            <span class="tb-select-icon">▾</span>
-          </div>
-          <div class="tb-sep"></div>
-          <div class="tb-pop-wrap">
-            <button class="tb-btn-color" id="btn-fgcolor" title="Màu chữ">
-              <span style="font-size:13px;font-weight:700;line-height:1">A</span>
-              <div class="color-underline" id="fgcolor-bar" style="background:#5b9cf6"></div>
-            </button>
-            <div class="color-picker-pop" id="pop-fgcolor">
-              <label>Màu chữ</label>
-              <div class="color-swatches" id="sw-fg"></div>
+          <div class="tb-sep" id="tb-sep-first"></div>
+          
+          <!-- Wrapper for note formatting tools -->
+          <div id="editor-tools" style="display: flex; align-items: center; gap: 2px;">
+            <button class="tb-btn" data-cmd="bold"           title="In đậm"><b>B</b></button>
+            <button class="tb-btn" data-cmd="italic"         title="In nghiêng"><i>I</i></button>
+            <button class="tb-btn" data-cmd="strikethrough"  title="Gạch ngang"><s>S</s></button>
+            <div class="tb-sep"></div>
+            <div class="tb-select-wrap" title="Cỡ chữ">
+              <select id="sel-fontsize" class="tb-select">
+                <option value="10px">10</option>
+                <option value="12px">12</option>
+                <option value="14px" selected>14</option>
+                <option value="16px">16</option>
+                <option value="18px">18</option>
+                <option value="22px">22</option>
+                <option value="28px">28</option>
+                <option value="36px">36</option>
+              </select>
+              <span class="tb-select-icon">▾</span>
             </div>
-          </div>
-          <div class="tb-pop-wrap">
-            <button class="tb-btn-color" id="btn-bgcolor" title="Highlight">
-              <span style="font-size:15px;line-height:1">▐</span>
-              <div class="color-underline" id="bgcolor-bar" style="background:#fbbf24"></div>
-            </button>
-            <div class="color-picker-pop" id="pop-bgcolor">
-              <label>Highlight</label>
-              <div class="color-swatches" id="sw-bg"></div>
+            <div class="tb-sep"></div>
+            <div class="tb-pop-wrap">
+              <button class="tb-btn-color" id="btn-fgcolor" title="Màu chữ">
+                <span style="font-size:13px;font-weight:700;line-height:1">A</span>
+                <div class="color-underline" id="fgcolor-bar" style="background:#5b9cf6"></div>
+              </button>
+              <div class="color-picker-pop" id="pop-fgcolor">
+                <label>Màu chữ</label>
+                <div class="color-swatches" id="sw-fg"></div>
+              </div>
             </div>
+            <div class="tb-pop-wrap">
+              <button class="tb-btn-color" id="btn-bgcolor" title="Highlight">
+                <span style="font-size:15px;line-height:1">▐</span>
+                <div class="color-underline" id="bgcolor-bar" style="background:#fbbf24"></div>
+              </button>
+              <div class="color-picker-pop" id="pop-bgcolor">
+                <label>Highlight</label>
+                <div class="color-swatches" id="sw-bg"></div>
+              </div>
+            </div>
+            <div class="tb-sep"></div>
+            <button class="tb-btn" data-cmd="link"        title="Chèn link">↗</button>
+            <button class="tb-btn" data-cmd="uploadImage" title="Chèn ảnh">🖼</button>
+            <div class="tb-sep"></div>
           </div>
-          <div class="tb-sep"></div>
-          <button class="tb-btn" data-cmd="link"        title="Chèn link">↗</button>
-          <button class="tb-btn" data-cmd="uploadImage" title="Chèn ảnh">🖼</button>
-          <div class="tb-sep"></div>
+
           <button class="tb-btn" id="btn-reload-note" title="Tải lại ghi chú" style="font-size:14px">↻</button>
         </div>
         <!-- Hidden file input for image upload -->
         <input type="file" id="img-file-inp" accept="image/*" style="display:none"/>
         <div id="editor-wrap">
           <div id="editor" contenteditable="true" spellcheck="false"></div>
+        </div>
+        
+        <!-- Kanban Workspace -->
+        <div id="kanban-wrap" style="display:none;">
+          <div id="kanban-board"></div>
         </div>
       </div>
     </div>
@@ -718,6 +1100,79 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
     </div>
   </div>
 </div>
+
+<!-- KANBAN COLUMN MODAL -->
+<div class="overlay" id="column-modal-overlay">
+  <div class="modal" style="max-width:360px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div class="modal-title" id="column-modal-title">Thêm cột mới</div>
+      <button class="btn-ghost" id="btn-colmodal-close">Đóng</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="field">
+        <label>Tên cột</label>
+        <input id="col-name-inp" type="text" placeholder="Ví dụ: Cần làm" autocomplete="off"/>
+      </div>
+      <div class="field">
+        <label>Mã cột</label>
+        <input id="col-code-inp" type="text" placeholder="Ví dụ: TODO" autocomplete="off"/>
+      </div>
+      <div id="colmodal-err" style="font-size:12px;color:var(--red);min-height:16px;text-align:center"></div>
+      <button class="btn-primary" id="btn-colmodal-save">Lưu cột</button>
+    </div>
+  </div>
+</div>
+
+<!-- KANBAN CARD MODAL -->
+<div class="overlay" id="card-modal-overlay">
+  <div class="modal" style="max-width:480px; width:90%">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div class="modal-title" id="card-modal-title">Chi tiết thẻ</div>
+      <button class="btn-ghost" id="btn-cardmodal-close">Đóng</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:10px">
+        <div class="field" style="flex:1">
+          <label>Tên thẻ</label>
+          <input id="card-name-inp" type="text" placeholder="Tên việc cần làm" autocomplete="off"/>
+        </div>
+        <div class="field" style="width:120px">
+          <label>Mã thẻ</label>
+          <input id="card-code-inp" type="text" placeholder="Ví dụ: TASK-01" autocomplete="off"/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Trạng thái (Cột)</label>
+        <select id="card-column-select" style="background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px; color:var(--text); font-family:var(--mono); font-size:13px; outline:none; width:100%;">
+          <!-- Populated dynamically -->
+        </select>
+      </div>
+      <div class="field">
+        <label>Nội dung chi tiết</label>
+        <textarea id="card-content-inp" rows="4" placeholder="Nhập mô tả..." 
+          style="background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px; color:var(--text); font-family:var(--mono); font-size:13px; outline:none; width:100%; resize:vertical; line-height:1.5;"></textarea>
+      </div>
+      
+      <div class="field">
+        <label>Ảnh đính kèm (nhiều ảnh)</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="btn-ghost" id="btn-card-upload-img" style="padding:6px 12px;font-size:12px">🖼 Tải ảnh lên</button>
+          <input type="file" id="card-img-file-inp" accept="image/*" multiple style="display:none"/>
+          <span id="card-img-uploading-status" style="font-size:11px;color:var(--text-3)"></span>
+        </div>
+        <div id="card-img-attachments"></div>
+      </div>
+      
+      <div id="cardmodal-err" style="font-size:12px;color:var(--red);min-height:16px;text-align:center"></div>
+      
+      <div style="display:flex;justify-content:space-between;gap:10px">
+        <button class="btn-primary danger" id="btn-cardmodal-delete" style="width:auto;padding:10px 18px">Xóa thẻ</button>
+        <button class="btn-primary" id="btn-cardmodal-save" style="width:auto;padding:10px 24px">Lưu thẻ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="img-resizer" style="display:none">
   <button class="resizer-zoom-btn" title="Phóng to ảnh">🔍</button>
   <div class="resizer-handle"></div>
@@ -773,9 +1228,557 @@ let dragSrcId = null;
 // - Tuyệt đối không dùng `current` sau khi await, vì user có thể đã chuyển sang note khác.
 let isOpeningNote = false;
 
-// SHARE MODE
+// ===== KANBAN VIEW & SWITCHER LOGIC =====
+let currentView = 'note';
+
+function switchView(view) {
+  currentView = view;
+  const panel = document.getElementById('editor-panel');
+  const tabNote = document.getElementById('tab-note');
+  const tabKanban = document.getElementById('tab-kanban');
+
+  if (view === 'kanban') {
+    panel.classList.add('kanban-active');
+    tabNote.classList.remove('active');
+    tabKanban.classList.add('active');
+    renderKanbanBoard();
+  } else {
+    panel.classList.remove('kanban-active');
+    tabNote.classList.add('active');
+    tabKanban.classList.remove('active');
+  }
+}
+
+function updatePinIndicators() {
+  if (!current) return;
+  const defView = current.default_view || 'note';
+  document.querySelectorAll('.tab-default-pin').forEach(pin => {
+    const isDefault = pin.dataset.pin === defView;
+    pin.classList.toggle('is-default', isDefault);
+  });
+}
+
+// Bind switch view tab clicks
+document.querySelectorAll('.switch-tab').forEach(tab => {
+  tab.addEventListener('click', (e) => {
+    if (e.target.closest('.tab-default-pin')) return;
+    const view = tab.dataset.view;
+    switchView(view);
+  });
+});
+
+// Bind default view pin clicks
+document.querySelectorAll('.tab-default-pin').forEach(pin => {
+  pin.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!current) return;
+    const view = pin.dataset.pin;
+    current.default_view = view;
+    updatePinIndicators();
+    try {
+      await api({ action: 'updateNote', id: current.id, default_view: view });
+      const idx = notes.findIndex(x => x.id === current.id);
+      if (idx !== -1) notes[idx].default_view = view;
+      toast('✓ Đã đặt chế độ mặc định');
+    } catch(err) {
+      toast('Lỗi lưu mặc định: ' + err.message);
+    }
+  });
+});
+
+// Helper to get active note kanban data
+function getActiveKanbanData() {
+  if (!current) return { columns: [], cards: [] };
+  if (!current.kanban_data || typeof current.kanban_data !== 'object') {
+    current.kanban_data = { columns: [], cards: [] };
+  }
+  if (!Array.isArray(current.kanban_data.columns)) current.kanban_data.columns = [];
+  if (!Array.isArray(current.kanban_data.cards)) current.kanban_data.cards = [];
+  return current.kanban_data;
+}
+
+// Render Kanban Board
+function renderKanbanBoard() {
+  const board = document.getElementById('kanban-board');
+  if (!board) return;
+  board.innerHTML = '';
+  
+  const data = getActiveKanbanData();
+  const sortedColumns = [...data.columns].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+  
+  sortedColumns.forEach(col => {
+    const colEl = document.createElement('div');
+    colEl.className = 'kanban-column';
+    colEl.dataset.id = col.id;
+    colEl.draggable = true;
+    
+    const colCards = data.cards
+      .filter(c => c.column_id === col.id)
+      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+      
+    let cardsHtml = '';
+    colCards.forEach(c => {
+      let thumbsHtml = '';
+      if (Array.isArray(c.image_urls) && c.image_urls.length > 0) {
+        thumbsHtml = `<div class="card-cover-thumbnails">`;
+        c.image_urls.forEach(url => {
+          thumbsHtml += `<img src="${url}" class="card-thumb" referrerpolicy="no-referrer"/>`;
+        });
+        thumbsHtml += `</div>`;
+      }
+      
+      const codeHtml = c.code ? `<span class="card-code">${esc(c.code)}</span>` : '';
+      const descHtml = c.content ? `<div class="card-desc-preview">${esc(c.content)}</div>` : '';
+      
+      cardsHtml += `
+        <div class="kanban-card" data-id="${c.id}" draggable="true">
+          <span class="card-drag-handle">⠿</span>
+          <div class="card-header-row">
+            <div class="card-title">${esc(c.name || 'Thẻ không tên')}</div>
+            ${codeHtml}
+          </div>
+          ${descHtml}
+          ${thumbsHtml}
+        </div>
+      `;
+    });
+    
+    colEl.innerHTML = `
+      <div class="column-header">
+        <span class="column-drag-handle">⠿</span>
+        <div class="column-info">
+          <div class="column-name" style="cursor:pointer;">${esc(col.name)}</div>
+          <div class="column-code">${esc(col.code || '')}</div>
+        </div>
+        <div class="column-actions">
+          <button class="col-act-btn col-edit" title="Sửa cột">✎</button>
+          <button class="col-act-btn col-del" title="Xóa cột">✕</button>
+        </div>
+      </div>
+      <div class="card-list" data-column-id="${col.id}">
+        ${cardsHtml}
+      </div>
+      <button class="btn-add-card" data-col-id="${col.id}">+ Thêm thẻ</button>
+    `;
+    
+    // Bind col header clicks to rename
+    colEl.querySelector('.column-info').onclick = () => openColumnModal(col);
+    colEl.querySelector('.col-edit').onclick = () => openColumnModal(col);
+    colEl.querySelector('.col-del').onclick = () => deleteColumn(col.id);
+    colEl.querySelector('.btn-add-card').onclick = () => openCardModal(null, col.id);
+    
+    colEl.querySelectorAll('.kanban-card').forEach(cardEl => {
+      const cardId = cardEl.dataset.id;
+      const card = data.cards.find(x => x.id === cardId);
+      cardEl.addEventListener('click', (e) => {
+        if (e.target.closest('.card-drag-handle')) return;
+        openCardModal(card, col.id);
+      });
+      setupCardDragDrop(cardEl, cardId);
+    });
+    
+    // Column drag/drop
+    setupColumnDragDrop(colEl, col.id);
+    
+    // Card list drop
+    const cardListEl = colEl.querySelector('.card-list');
+    cardListEl.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (dragCardId) cardListEl.style.background = 'rgba(91,156,246,.05)';
+    });
+    cardListEl.addEventListener('dragleave', () => {
+      cardListEl.style.background = '';
+    });
+    cardListEl.addEventListener('drop', e => {
+      e.preventDefault();
+      cardListEl.style.background = '';
+      if (!dragCardId) return;
+      const card = data.cards.find(x => x.id === dragCardId);
+      if (!card) return;
+      
+      if (card.column_id !== col.id) {
+        card.column_id = col.id;
+        card.sort_order = 9999;
+        reorderCardsInColumns();
+        renderKanbanBoard();
+        triggerSaveKanban();
+      } else {
+        const srcIdx = data.cards.findIndex(x => x.id === dragCardId);
+        if (srcIdx !== -1) {
+          const [moved] = data.cards.splice(srcIdx, 1);
+          data.cards.push(moved);
+          reorderCardsInColumns();
+          renderKanbanBoard();
+          triggerSaveKanban();
+        }
+      }
+      dragCardId = null;
+    });
+    
+    board.appendChild(colEl);
+  });
+  
+  const addColBtn = document.createElement('div');
+  addColBtn.className = 'kanban-add-column-btn';
+  addColBtn.innerHTML = '<span>+ Thêm cột</span>';
+  addColBtn.onclick = () => openColumnModal(null);
+  board.appendChild(addColBtn);
+}
+
+// Column Drag & Drop
+let dragColId = null;
+function setupColumnDragDrop(el, colId) {
+  el.addEventListener('dragstart', e => {
+    if (!e.target.closest('.column-header') && !e.target.classList.contains('column-drag-handle')) {
+      e.preventDefault(); return;
+    }
+    dragColId = colId;
+    el.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  el.addEventListener('dragend', () => {
+    el.classList.remove('dragging');
+    document.querySelectorAll('.kanban-column').forEach(c => c.classList.remove('drag-over'));
+  });
+  el.addEventListener('dragover', e => {
+    e.preventDefault();
+    if (dragColId && dragColId !== colId) el.classList.add('drag-over');
+  });
+  el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.classList.remove('drag-over');
+    if (!dragColId || dragColId === colId) return;
+    
+    const data = getActiveKanbanData();
+    const srcIdx = data.columns.findIndex(x => x.id === dragColId);
+    const dstIdx = data.columns.findIndex(x => x.id === colId);
+    
+    if (srcIdx !== -1 && dstIdx !== -1) {
+      const [moved] = data.columns.splice(srcIdx, 1);
+      data.columns.splice(dstIdx, 0, moved);
+      data.columns.forEach((c, idx) => c.sort_order = idx);
+      renderKanbanBoard();
+      triggerSaveKanban();
+    }
+    dragColId = null;
+  });
+}
+
+// Card Drag & Drop
+let dragCardId = null;
+function setupCardDragDrop(el, cardId) {
+  el.addEventListener('dragstart', e => {
+    dragCardId = cardId;
+    el.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.stopPropagation();
+  });
+  el.addEventListener('dragend', () => {
+    el.classList.remove('dragging');
+    document.querySelectorAll('.kanban-card').forEach(c => c.classList.remove('drag-over'));
+  });
+  el.addEventListener('dragover', e => {
+    e.preventDefault();
+    if (dragCardId && dragCardId !== cardId) el.classList.add('drag-over');
+    e.stopPropagation();
+  });
+  el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.classList.remove('drag-over');
+    e.stopPropagation();
+    if (!dragCardId || dragCardId === cardId) return;
+    
+    const data = getActiveKanbanData();
+    const srcIdx = data.cards.findIndex(x => x.id === dragCardId);
+    const dstIdx = data.cards.findIndex(x => x.id === cardId);
+    
+    if (srcIdx !== -1 && dstIdx !== -1) {
+      const movedCard = data.cards[srcIdx];
+      const targetCard = data.cards[dstIdx];
+      movedCard.column_id = targetCard.column_id;
+      data.cards.splice(srcIdx, 1);
+      const newDstIdx = data.cards.findIndex(x => x.id === cardId);
+      data.cards.splice(newDstIdx, 0, movedCard);
+      reorderCardsInColumns();
+      renderKanbanBoard();
+      triggerSaveKanban();
+    }
+    dragCardId = null;
+  });
+}
+
+function reorderCardsInColumns() {
+  const data = getActiveKanbanData();
+  data.columns.forEach(col => {
+    const colCards = data.cards.filter(c => c.column_id === col.id);
+    colCards.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    colCards.forEach((c, idx) => c.sort_order = idx);
+  });
+}
+
+// Column CRUD
+let activeEditColumn = null;
+function openColumnModal(col = null) {
+  activeEditColumn = col;
+  const overlay = document.getElementById('column-modal-overlay');
+  const title = document.getElementById('column-modal-title');
+  const nameInp = document.getElementById('col-name-inp');
+  const codeInp = document.getElementById('col-code-inp');
+  const errEl = document.getElementById('colmodal-err');
+  
+  errEl.textContent = '';
+  
+  // Reset save listener
+  const saveBtn = document.getElementById('btn-colmodal-save');
+  const newSaveBtn = saveBtn.cloneNode(true);
+  saveBtn.replaceWith(newSaveBtn);
+  
+  if (col) {
+    title.textContent = 'Sửa cột';
+    nameInp.value = col.name;
+    codeInp.value = col.code || '';
+  } else {
+    title.textContent = 'Thêm cột mới';
+    nameInp.value = '';
+    codeInp.value = '';
+  }
+  
+  newSaveBtn.onclick = () => {
+    const name = nameInp.value.trim();
+    const code = codeInp.value.trim().toUpperCase();
+    if (!name) { errEl.textContent = 'Vui lòng nhập tên cột.'; return; }
+    
+    const data = getActiveKanbanData();
+    if (activeEditColumn) {
+      activeEditColumn.name = name; activeEditColumn.code = code;
+    } else {
+      data.columns.push({
+        id: 'col_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        name: name,
+        code: code,
+        sort_order: data.columns.length
+      });
+    }
+    closeColumnModal();
+    renderKanbanBoard();
+    triggerSaveKanban();
+  };
+  
+  overlay.classList.add('open');
+  nameInp.focus();
+}
+
+function closeColumnModal() {
+  document.getElementById('column-modal-overlay').classList.remove('open');
+  activeEditColumn = null;
+}
+document.getElementById('btn-colmodal-close').onclick = closeColumnModal;
+document.getElementById('column-modal-overlay').onclick = e => { if (e.target === e.currentTarget) closeColumnModal(); };
+
+function deleteColumn(colId) {
+  const data = getActiveKanbanData();
+  const col = data.columns.find(x => x.id === colId);
+  if (!col) return;
+  if (!confirm(`Xóa cột "${col.name}"? Tất cả thẻ trong cột này sẽ bị xóa.`)) return;
+  data.columns = data.columns.filter(x => x.id !== colId);
+  data.cards = data.cards.filter(x => x.column_id !== colId);
+  renderKanbanBoard();
+  triggerSaveKanban();
+}
+
+// Card CRUD
+let activeEditCard = null;
+let activeCardColumnId = null;
+let cardAttachedImages = [];
+
+function openCardModal(card = null, colId = null) {
+  activeEditCard = card;
+  activeCardColumnId = colId;
+  cardAttachedImages = card && Array.isArray(card.image_urls) ? [...card.image_urls] : [];
+  
+  const overlay = document.getElementById('card-modal-overlay');
+  const title = document.getElementById('card-modal-title');
+  const nameInp = document.getElementById('card-name-inp');
+  const codeInp = document.getElementById('card-code-inp');
+  const colSelect = document.getElementById('card-column-select');
+  const contentInp = document.getElementById('card-content-inp');
+  const errEl = document.getElementById('cardmodal-err');
+  
+  errEl.textContent = '';
+  
+  const data = getActiveKanbanData();
+  colSelect.innerHTML = '';
+  data.columns.forEach(col => {
+    const opt = document.createElement('option');
+    opt.value = col.id; opt.textContent = col.name;
+    colSelect.appendChild(opt);
+  });
+  
+  // Reset buttons
+  const saveBtn = document.getElementById('btn-cardmodal-save');
+  const newSaveBtn = saveBtn.cloneNode(true);
+  saveBtn.replaceWith(newSaveBtn);
+  
+  const delBtn = document.getElementById('btn-cardmodal-delete');
+  const newDelBtn = delBtn.cloneNode(true);
+  delBtn.replaceWith(newDelBtn);
+
+  if (card) {
+    title.textContent = 'Chi tiết thẻ';
+    nameInp.value = card.name;
+    codeInp.value = card.code || '';
+    colSelect.value = card.column_id;
+    contentInp.value = card.content || '';
+    newDelBtn.style.display = 'block';
+  } else {
+    title.textContent = 'Thêm thẻ mới';
+    nameInp.value = '';
+    codeInp.value = '';
+    colSelect.value = colId;
+    contentInp.value = '';
+    newDelBtn.style.display = 'none';
+  }
+  
+  newSaveBtn.onclick = () => {
+    const name = nameInp.value.trim();
+    const code = codeInp.value.trim().toUpperCase();
+    const column_id = colSelect.value;
+    const content = contentInp.value;
+    if (!name) { errEl.textContent = 'Vui lòng nhập tên thẻ.'; return; }
+    
+    const data = getActiveKanbanData();
+    if (activeEditCard) {
+      activeEditCard.name = name; activeEditCard.code = code;
+      activeEditCard.column_id = column_id; activeEditCard.content = content;
+      activeEditCard.image_urls = [...cardAttachedImages];
+    } else {
+      data.cards.push({
+        id: 'card_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        column_id: column_id,
+        name: name,
+        code: code,
+        content: content,
+        image_urls: [...cardAttachedImages],
+        sort_order: data.cards.filter(c => c.column_id === column_id).length
+      });
+    }
+    reorderCardsInColumns();
+    closeCardModal();
+    renderKanbanBoard();
+    triggerSaveKanban();
+  };
+  
+  newDelBtn.onclick = () => {
+    if (!activeEditCard) return;
+    if (!confirm(`Xóa thẻ "${activeEditCard.name}"?`)) return;
+    const data = getActiveKanbanData();
+    data.cards = data.cards.filter(x => x.id !== activeEditCard.id);
+    reorderCardsInColumns();
+    closeCardModal();
+    renderKanbanBoard();
+    triggerSaveKanban();
+  };
+  
+  renderCardImageAttachments();
+  overlay.classList.add('open');
+  nameInp.focus();
+}
+
+function closeCardModal() {
+  document.getElementById('card-modal-overlay').classList.remove('open');
+  activeEditCard = null;
+  activeCardColumnId = null;
+  cardAttachedImages = [];
+}
+document.getElementById('btn-cardmodal-close').onclick = closeCardModal;
+document.getElementById('card-modal-overlay').onclick = e => { if (e.target === e.currentTarget) closeCardModal(); };
+
+function renderCardImageAttachments() {
+  const container = document.getElementById('card-img-attachments');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  if (cardAttachedImages.length === 0) {
+    container.innerHTML = '<span style="font-size:11px;color:var(--text-3);padding:8px 4px;">Chưa có ảnh đính kèm.</span>';
+    return;
+  }
+  
+  cardAttachedImages.forEach((url, idx) => {
+    const item = document.createElement('div');
+    item.className = 'card-img-item';
+    item.innerHTML = `
+      <img src="${url}" referrerpolicy="no-referrer" alt="Thumbnail"/>
+      <button class="card-img-item-del" data-idx="${idx}" title="Xóa ảnh">✕</button>
+    `;
+    item.querySelector('img').onclick = () => openLightbox(url);
+    item.querySelector('.card-img-item-del').onclick = (e) => {
+      e.stopPropagation();
+      cardAttachedImages.splice(idx, 1);
+      renderCardImageAttachments();
+    };
+    container.appendChild(item);
+  });
+}
+
+// Upload Card images
+document.getElementById('btn-card-upload-img').onclick = () => {
+  document.getElementById('card-img-file-inp').click();
+};
+document.getElementById('card-img-file-inp').onchange = async function() {
+  const files = this.files;
+  if (!files || files.length === 0) return;
+  const statusEl = document.getElementById('card-img-uploading-status');
+  statusEl.textContent = `⏳ Đang tải ${files.length} ảnh...`;
+  try {
+    for (const file of files) {
+      const b64 = await blobToB64(file);
+      const res = await api({
+        action: 'uploadImage',
+        base64: b64.split(',')[1],
+        mimeType: file.type,
+        filename: 'img_' + Date.now() + '_' + Math.random().toString(16).slice(2, 6)
+      });
+      cardAttachedImages.push(res.url);
+    }
+    statusEl.textContent = '✓ Thành công!';
+    setTimeout(() => { statusEl.textContent = ''; }, 2000);
+    renderCardImageAttachments();
+  } catch(err) {
+    statusEl.textContent = '✕ Lỗi: ' + err.message;
+  }
+  this.value = '';
+};
+
+// Kanban Autosave
+let kanbanSaveTimer = null;
+function triggerSaveKanban() {
+  if (!current || isOpeningNote) return;
+  const el = document.getElementById('save-ind');
+  el.className = 'save-indicator saving';
+  el.textContent = 'Đang lưu tự động...';
+  
+  clearTimeout(kanbanSaveTimer);
+  kanbanSaveTimer = setTimeout(async () => {
+    if (!current) return;
+    try {
+      await api({
+        action: 'updateNote',
+        id: current.id,
+        kanban_data: current.kanban_data
+      });
+      const idx = notes.findIndex(x => x.id === current.id);
+      if (idx !== -1) notes[idx].kanban_data = current.kanban_data;
+      setLastSaved();
+    } catch(e) {
+      setSaveError();
+    }
+  }, 1000);
+}
+
+// ===== SHARE MODE =====
 async function checkShareMode() {
-// Đọc token từ /tab/slug hoặc fallback ?n=slug
   const _pathMatch = location.pathname.match(/\/tab\/([^\/]+)/);
   const token = _pathMatch ? _pathMatch[1] : new URLSearchParams(location.search).get('n');
   if (!token) return false;
@@ -783,34 +1786,403 @@ async function checkShareMode() {
   const screen = document.getElementById('share-screen');
   screen.style.display = 'flex';
   document.getElementById('share-body').innerHTML = '<div style="padding:48px;text-align:center"><div class="spin" style="margin:auto"></div></div>';
+  
   try {
     const note = await api({ action: 'getByToken', token });
     if (note.error || !note.id) {
       document.getElementById('share-body').innerHTML = '<p style="color:var(--text-3);padding:40px 0">🔒 Ghi chú ở trạng thái riêng tư.</p>';
       return true;
     }
+    
+    // Safely parse kanban data
+    if (!note.kanban_data || typeof note.kanban_data !== 'object') {
+      note.kanban_data = { columns: [], cards: [] };
+    }
+    if (!Array.isArray(note.kanban_data.columns)) note.kanban_data.columns = [];
+    if (!Array.isArray(note.kanban_data.cards)) note.kanban_data.cards = [];
+
     const pill = document.getElementById('share-pill');
     if (note.share_perm === 'edit') { pill.textContent = '✏️ Có thể sửa'; pill.classList.add('edit'); }
+    
     const body = document.getElementById('share-body');
-    if (note.share_perm === 'view') {
-      body.innerHTML = `<h1 style="font-family:var(--serif);font-size:28px;font-weight:300;margin-bottom:24px">${esc(note.title)}</h1><div class="rendered">${note.content||''}</div>`;
-    } else {
-      body.innerHTML = `
-        <input id="s-title" value="${esc(note.title)}" style="width:100%;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text);font-family:var(--serif);font-size:26px;font-weight:300;padding:0 0 14px;outline:none;margin-bottom:24px"/>
-        <div id="s-editor" contenteditable="true" style="outline:none;font-family:var(--mono);font-size:14px;line-height:1.85;min-height:400px;color:var(--text)"></div>`;
+    body.innerHTML = `
+      <div class="share-header">
+        ${note.share_perm === 'edit'
+          ? `<input id="s-title" value="${esc(note.title)}" style="width:100%;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text);font-family:var(--serif);font-size:26px;font-weight:300;padding:0 0 14px;outline:none;margin-bottom:20px"/>`
+          : `<h1 id="s-title-static" style="font-family:var(--serif);font-size:28px;font-weight:300;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:14px;">${esc(note.title)}</h1>`
+        }
+        <div class="view-switcher-bar" style="padding: 0; background: transparent; height: 36px; border-bottom: 1px solid var(--border); margin-bottom: 16px;">
+          <div class="switcher-tabs">
+            <button class="switch-tab active" data-sview="note" id="s-tab-note" style="height: 30px;">📝 Ghi chú</button>
+            <button class="switch-tab" data-sview="kanban" id="s-tab-kanban" style="height: 30px;">📋 Bảng (Kanban)</button>
+          </div>
+        </div>
+      </div>
+      <div id="s-note-wrap">
+        ${note.share_perm === 'edit'
+          ? `<div id="s-editor" contenteditable="true" style="outline:none;font-family:var(--mono);font-size:14px;line-height:1.85;min-height:400px;color:var(--text)"></div>`
+          : `<div class="rendered" id="s-rendered"></div>`
+        }
+      </div>
+      <div id="s-kanban-wrap" style="display:none;">
+        <div id="s-kanban-board" class="kanban-board-shared"></div>
+      </div>
+    `;
+
+    if (note.share_perm === 'edit') {
       const ed = document.getElementById('s-editor');
       ed.innerHTML = note.content || '';
       setupPaste(ed);
-      // Hiện nút lưu trên thanh header
+    } else {
+      document.getElementById('s-rendered').innerHTML = note.content || '';
+    }
+
+    let activeSView = note.default_view || 'note';
+    function switchSharedView(view) {
+      activeSView = view;
+      const sTabNote = document.getElementById('s-tab-note');
+      const sTabKanban = document.getElementById('s-tab-kanban');
+      const sNoteWrap = document.getElementById('s-note-wrap');
+      const sKanbanWrap = document.getElementById('s-kanban-wrap');
+      
+      if (view === 'kanban') {
+        sTabNote.classList.remove('active');
+        sTabKanban.classList.add('active');
+        sNoteWrap.style.display = 'none';
+        sKanbanWrap.style.display = 'block';
+        renderSharedKanbanBoard();
+      } else {
+        sTabNote.classList.add('active');
+        sTabKanban.classList.remove('active');
+        sNoteWrap.style.display = 'block';
+        sKanbanWrap.style.display = 'none';
+      }
+    }
+
+    document.getElementById('s-tab-note').onclick = () => switchSharedView('note');
+    document.getElementById('s-tab-kanban').onclick = () => switchSharedView('kanban');
+
+    function renderSharedKanbanBoard() {
+      const board = document.getElementById('s-kanban-board');
+      board.innerHTML = '';
+      const sortedColumns = [...note.kanban_data.columns].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+      
+      sortedColumns.forEach(col => {
+        const colEl = document.createElement('div');
+        colEl.className = 'kanban-column';
+        colEl.dataset.id = col.id;
+        
+        const colCards = note.kanban_data.cards
+          .filter(c => c.column_id === col.id)
+          .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+          
+        let cardsHtml = '';
+        colCards.forEach(c => {
+          let thumbsHtml = '';
+          if (Array.isArray(c.image_urls) && c.image_urls.length > 0) {
+            thumbsHtml = `<div class="card-cover-thumbnails">`;
+            c.image_urls.forEach(url => {
+              thumbsHtml += `<img src="${url}" class="card-thumb" referrerpolicy="no-referrer"/>`;
+            });
+            thumbsHtml += `</div>`;
+          }
+          const codeHtml = c.code ? `<span class="card-code">${esc(c.code)}</span>` : '';
+          const descHtml = c.content ? `<div class="card-desc-preview">${esc(c.content)}</div>` : '';
+          cardsHtml += `
+            <div class="kanban-card" data-id="${c.id}">
+              ${note.share_perm === 'edit' ? `<span class="card-drag-handle">⠿</span>` : ''}
+              <div class="card-header-row">
+                <div class="card-title">${esc(c.name || 'Thẻ không tên')}</div>
+                ${codeHtml}
+              </div>
+              ${descHtml}
+              ${thumbsHtml}
+            </div>
+          `;
+        });
+        
+        colEl.innerHTML = `
+          <div class="column-header">
+            ${note.share_perm === 'edit' ? `<span class="column-drag-handle">⠿</span>` : ''}
+            <div class="column-info">
+              <div class="column-name">${esc(col.name)}</div>
+              <div class="column-code">${esc(col.code || '')}</div>
+            </div>
+            ${note.share_perm === 'edit' ? `
+              <div class="column-actions">
+                <button class="col-act-btn col-edit" title="Sửa cột">✎</button>
+                <button class="col-act-btn col-del" title="Xóa cột">✕</button>
+              </div>
+            ` : ''}
+          </div>
+          <div class="card-list" data-column-id="${col.id}">
+            ${cardsHtml}
+          </div>
+          ${note.share_perm === 'edit' ? `<button class="btn-add-card" data-col-id="${col.id}">+ Thêm thẻ</button>` : ''}
+        `;
+
+        if (note.share_perm === 'edit') {
+          colEl.querySelector('.col-edit').onclick = (e) => { e.stopPropagation(); openSharedColumnModal(col); };
+          colEl.querySelector('.col-del').onclick = (e) => { e.stopPropagation(); deleteSharedColumn(col.id); };
+          colEl.querySelector('.btn-add-card').onclick = (e) => { e.stopPropagation(); openSharedCardModal(null, col.id); };
+          
+          setupSharedColumnDragDrop(colEl, col.id);
+          colEl.querySelectorAll('.kanban-card').forEach(cardEl => {
+            const cardId = cardEl.dataset.id;
+            const card = note.kanban_data.cards.find(x => x.id === cardId);
+            cardEl.onclick = () => openSharedCardModal(card, col.id);
+            setupSharedCardDragDrop(cardEl, cardId);
+          });
+          
+          const cardListEl = colEl.querySelector('.card-list');
+          cardListEl.addEventListener('dragover', e => {
+            e.preventDefault();
+            if (dragCardId) cardListEl.style.background = 'rgba(91,156,246,.05)';
+          });
+          cardListEl.addEventListener('dragleave', () => cardListEl.style.background = '');
+          cardListEl.addEventListener('drop', e => {
+            e.preventDefault();
+            cardListEl.style.background = '';
+            if (!dragCardId) return;
+            const card = note.kanban_data.cards.find(x => x.id === dragCardId);
+            if (!card) return;
+            
+            if (card.column_id !== col.id) {
+              card.column_id = col.id;
+              card.sort_order = 9999;
+              reorderSharedCards();
+              renderSharedKanbanBoard();
+            } else {
+              const srcIdx = note.kanban_data.cards.findIndex(x => x.id === dragCardId);
+              if (srcIdx !== -1) {
+                const [moved] = note.kanban_data.cards.splice(srcIdx, 1);
+                note.kanban_data.cards.push(moved);
+                reorderSharedCards();
+                renderSharedKanbanBoard();
+              }
+            }
+            dragCardId = null;
+          });
+        } else {
+          colEl.querySelectorAll('.kanban-card').forEach(cardEl => {
+            const cardId = cardEl.dataset.id;
+            const card = note.kanban_data.cards.find(x => x.id === cardId);
+            cardEl.onclick = () => openSharedCardReadOnlyModal(card);
+          });
+        }
+        board.appendChild(colEl);
+      });
+      
+      if (note.share_perm === 'edit') {
+        const addColBtn = document.createElement('div');
+        addColBtn.className = 'kanban-add-column-btn';
+        addColBtn.innerHTML = '<span>+ Thêm cột</span>';
+        addColBtn.onclick = () => openSharedColumnModal(null);
+        board.appendChild(addColBtn);
+      }
+    }
+
+    function reorderSharedCards() {
+      note.kanban_data.columns.forEach(col => {
+        const colCards = note.kanban_data.cards.filter(c => c.column_id === col.id);
+        colCards.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+        colCards.forEach((c, idx) => c.sort_order = idx);
+      });
+    }
+
+    function setupSharedColumnDragDrop(el, colId) {
+      el.addEventListener('dragstart', e => {
+        if (!e.target.closest('.column-header') && !e.target.classList.contains('column-drag-handle')) {
+          e.preventDefault(); return;
+        }
+        dragColId = colId;
+        el.classList.add('dragging');
+      });
+      el.addEventListener('dragend', () => {
+        el.classList.remove('dragging');
+        document.querySelectorAll('.kanban-column').forEach(c => c.classList.remove('drag-over'));
+      });
+      el.addEventListener('dragover', e => {
+        e.preventDefault();
+        if (dragColId && dragColId !== colId) el.classList.add('drag-over');
+      });
+      el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+      el.addEventListener('drop', e => {
+        e.preventDefault();
+        el.classList.remove('drag-over');
+        if (!dragColId || dragColId === colId) return;
+        const srcIdx = note.kanban_data.columns.findIndex(x => x.id === dragColId);
+        const dstIdx = note.kanban_data.columns.findIndex(x => x.id === colId);
+        if (srcIdx !== -1 && dstIdx !== -1) {
+          const [moved] = note.kanban_data.columns.splice(srcIdx, 1);
+          note.kanban_data.columns.splice(dstIdx, 0, moved);
+          note.kanban_data.columns.forEach((c, idx) => c.sort_order = idx);
+          renderSharedKanbanBoard();
+        }
+        dragColId = null;
+      });
+    }
+
+    function setupSharedCardDragDrop(el, cardId) {
+      el.addEventListener('dragstart', e => {
+        dragCardId = cardId;
+        el.classList.add('dragging');
+        e.stopPropagation();
+      });
+      el.addEventListener('dragend', () => {
+        el.classList.remove('dragging');
+        document.querySelectorAll('.kanban-card').forEach(c => c.classList.remove('drag-over'));
+      });
+      el.addEventListener('dragover', e => {
+        e.preventDefault();
+        if (dragCardId && dragCardId !== cardId) el.classList.add('drag-over');
+        e.stopPropagation();
+      });
+      el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+      el.addEventListener('drop', e => {
+        e.preventDefault();
+        el.classList.remove('drag-over');
+        e.stopPropagation();
+        if (!dragCardId || dragCardId === cardId) return;
+        const srcIdx = note.kanban_data.cards.findIndex(x => x.id === dragCardId);
+        const dstIdx = note.kanban_data.cards.findIndex(x => x.id === cardId);
+        if (srcIdx !== -1 && dstIdx !== -1) {
+          const movedCard = note.kanban_data.cards[srcIdx];
+          const targetCard = note.kanban_data.cards[dstIdx];
+          movedCard.column_id = targetCard.column_id;
+          note.kanban_data.cards.splice(srcIdx, 1);
+          const newDstIdx = note.kanban_data.cards.findIndex(x => x.id === cardId);
+          note.kanban_data.cards.splice(newDstIdx, 0, movedCard);
+          reorderSharedCards();
+          renderSharedKanbanBoard();
+        }
+        dragCardId = null;
+      });
+    }
+
+    function openSharedColumnModal(col = null) {
+      activeEditColumn = col;
+      openColumnModal(col);
+      const saveBtn = document.getElementById('btn-colmodal-save');
+      const newSaveBtn = saveBtn.cloneNode(true);
+      saveBtn.replaceWith(newSaveBtn);
+      
+      newSaveBtn.onclick = () => {
+        const name = document.getElementById('col-name-inp').value.trim();
+        const code = document.getElementById('col-code-inp').value.trim().toUpperCase();
+        if (!name) return;
+        if (activeEditColumn) {
+          activeEditColumn.name = name; activeEditColumn.code = code;
+        } else {
+          note.kanban_data.columns.push({
+            id: 'col_' + Date.now(), name, code, sort_order: note.kanban_data.columns.length
+          });
+        }
+        closeColumnModal();
+        renderSharedKanbanBoard();
+      };
+    }
+
+    function deleteSharedColumn(colId) {
+      if (!confirm('Xóa cột này? Tất cả thẻ bên trong sẽ bị xóa.')) return;
+      note.kanban_data.columns = note.kanban_data.columns.filter(x => x.id !== colId);
+      note.kanban_data.cards = note.kanban_data.cards.filter(x => x.column_id !== colId);
+      renderSharedKanbanBoard();
+    }
+
+    function openSharedCardModal(card = null, colId = null) {
+      activeEditCard = card;
+      activeCardColumnId = colId;
+      cardAttachedImages = card && Array.isArray(card.image_urls) ? [...card.image_urls] : [];
+      openCardModal(card, colId);
+      
+      const saveBtn = document.getElementById('btn-cardmodal-save');
+      const newSaveBtn = saveBtn.cloneNode(true);
+      saveBtn.replaceWith(newSaveBtn);
+      
+      newSaveBtn.onclick = () => {
+        const name = document.getElementById('card-name-inp').value.trim();
+        const code = document.getElementById('card-code-inp').value.trim().toUpperCase();
+        const column_id = document.getElementById('card-column-select').value;
+        const content = document.getElementById('card-content-inp').value;
+        if (!name) return;
+        
+        if (activeEditCard) {
+          activeEditCard.name = name; activeEditCard.code = code;
+          activeEditCard.column_id = column_id; activeEditCard.content = content;
+          activeEditCard.image_urls = [...cardAttachedImages];
+        } else {
+          note.kanban_data.cards.push({
+            id: 'card_' + Date.now(), column_id, name, code, content, image_urls: [...cardAttachedImages],
+            sort_order: note.kanban_data.cards.filter(c => c.column_id === column_id).length
+          });
+        }
+        reorderSharedCards();
+        closeCardModal();
+        renderSharedKanbanBoard();
+      };
+      
+      const delBtn = document.getElementById('btn-cardmodal-delete');
+      const newDelBtn = delBtn.cloneNode(true);
+      delBtn.replaceWith(newDelBtn);
+      newDelBtn.onclick = () => {
+        if (!activeEditCard) return;
+        if (!confirm('Xóa thẻ này?')) return;
+        note.kanban_data.cards = note.kanban_data.cards.filter(x => x.id !== activeEditCard.id);
+        reorderSharedCards();
+        closeCardModal();
+        renderSharedKanbanBoard();
+      };
+    }
+
+    function openSharedCardReadOnlyModal(card) {
+      openCardModal(card, card.column_id);
+      document.getElementById('card-name-inp').disabled = true;
+      document.getElementById('card-code-inp').disabled = true;
+      document.getElementById('card-column-select').disabled = true;
+      document.getElementById('card-content-inp').disabled = true;
+      document.getElementById('btn-card-upload-img').style.display = 'none';
+      document.getElementById('btn-cardmodal-delete').style.display = 'none';
+      document.getElementById('btn-cardmodal-save').style.display = 'none';
+      
+      const closeBtn = document.getElementById('btn-cardmodal-close');
+      const newCloseBtn = closeBtn.cloneNode(true);
+      closeBtn.replaceWith(newCloseBtn);
+      newCloseBtn.onclick = () => {
+        document.getElementById('card-name-inp').disabled = false;
+        document.getElementById('card-code-inp').disabled = false;
+        document.getElementById('card-column-select').disabled = false;
+        document.getElementById('card-content-inp').disabled = false;
+        document.getElementById('btn-card-upload-img').style.display = 'flex';
+        document.getElementById('btn-cardmodal-delete').style.display = 'block';
+        document.getElementById('btn-cardmodal-save').style.display = 'block';
+        closeCardModal();
+      };
+    }
+
+    switchSharedView(activeSView);
+
+    if (note.share_perm === 'edit') {
       const sSave = document.getElementById('s-save');
       const sSt   = document.getElementById('s-st');
       sSave.style.display = 'block';
+      
       async function doShareSave() {
         if (sSave.disabled) return;
         sSave.disabled = true; sSave.textContent = '⏳ Đang lưu...';
         sSt.textContent = '';
         try {
-          await api({ action: 'updateNote', id: note.id, title: document.getElementById('s-title').value, content: ed.innerHTML });
+          const title = document.getElementById('s-title') ? document.getElementById('s-title').value : note.title;
+          const payload = {
+            action: 'updateNote',
+            id: note.id,
+            title: title,
+            kanban_data: note.kanban_data
+          };
+          const ed = document.getElementById('s-editor');
+          if (ed) payload.content = ed.innerHTML;
+          
+          await api(payload);
           sSave.textContent = '✓ Đã lưu';
           sSt.style.color = 'var(--green)'; sSt.textContent = 'Đã lưu lúc ' + new Date().toLocaleTimeString('vi-VN');
           setTimeout(() => { sSave.textContent = '💾 Lưu thay đổi'; sSave.disabled = false; }, 2000);
@@ -1363,18 +2735,50 @@ document.getElementById('sidebar-overlay').addEventListener('click', closeSideba
 async function manualSave() {
   if (!current) return;
   const btn = document.getElementById('btn-save-manual');
-  const snapshot = getEditorSnapshot();
-  if (!snapshot) return;
-
+  
   clearTimeout(saveTimer);
+  clearTimeout(kanbanSaveTimer);
+  
   btn.textContent = '⏳ Đang lưu...'; btn.className = 'btn-save-manual saving'; btn.disabled = true;
+  
   try {
-    await persistNoteSnapshot(snapshot);
+    const title = document.getElementById('note-title-inp').value || 'Không có tiêu đề';
+    const payload = {
+      action: 'updateNote',
+      id: current.id,
+      title: title
+    };
+    
+    if (currentView === 'kanban') {
+      payload.kanban_data = current.kanban_data;
+    } else {
+      payload.content = document.getElementById('editor').innerHTML;
+    }
+    
+    await api(payload);
+    
+    // Update local state
+    const updated_at = new Date().toISOString();
+    const idx = notes.findIndex(n => String(n.id) === current.id);
+    if (idx !== -1) {
+      const updatedNote = { ...notes[idx], title, updated_at };
+      if (currentView === 'kanban') {
+        updatedNote.kanban_data = current.kanban_data;
+      } else {
+        updatedNote.content = payload.content;
+      }
+      notes[idx] = updatedNote;
+      current = updatedNote;
+    }
+    
+    renderList(document.getElementById('search-inp').value);
+    
     btn.textContent = '✓ Đã lưu'; btn.className = 'btn-save-manual saved';
+    setLastSaved();
     setTimeout(() => { btn.textContent = '💾 Lưu'; btn.className = 'btn-save-manual'; btn.disabled = false; }, 2000);
   } catch(e) {
     btn.textContent = '✕ Lỗi'; btn.className = 'btn-save-manual error';
-    if (current && String(current.id) === snapshot.id) setSaveError();
+    setSaveError();
     setTimeout(() => { btn.textContent = '💾 Lưu'; btn.className = 'btn-save-manual'; btn.disabled = false; }, 2500);
     toast('Lỗi lưu: ' + e.message);
   }
@@ -1394,11 +2798,16 @@ function openNote(n) {
   panel.classList.add('active');
   document.getElementById('note-title-inp').value = n.title || '';
   document.getElementById('editor').innerHTML = n.content || '';
+  
+  // Set view tab based on default_view
+  const view = n.default_view || 'note';
+  switchView(view);
+  updatePinIndicators();
+
   setSaveInd('','');
   renderList(document.getElementById('search-inp').value);
   if (window.innerWidth <= 768) closeSidebar();
-  // Một số browser/extension có thể bắn input khi set innerHTML/value bằng code.
-  // Flag này ngăn autosave giả trong lúc hydrate nội dung note mới.
+  
   setTimeout(() => { isOpeningNote = false; }, 0);
 }
 
@@ -1572,6 +2981,9 @@ document.getElementById('btn-reload-note').addEventListener('click', async () =>
       current = fresh;
       document.getElementById('note-title-inp').value = fresh.title || '';
       document.getElementById('editor').innerHTML = fresh.content || '';
+      if (currentView === 'kanban') {
+        renderKanbanBoard();
+      }
       setTimeout(() => { isOpeningNote = false; }, 0);
     }
     setSaveInd('saved', '✓ đã tải lại');
