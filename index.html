@@ -1359,7 +1359,10 @@ function renderKanbanBoard() {
       <div class="column-header">
         <span class="column-drag-handle">⠿</span>
         <div class="column-info">
-          <div class="column-name" style="cursor:pointer;">${esc(col.name)}</div>
+          <div class="column-name" style="cursor:pointer; display: flex; align-items: center; gap: 6px;">
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(col.name)}</span>
+            <span class="column-card-count" style="font-size: 10px; font-weight: 500; color: var(--text-2); background: var(--surface2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 10px; flex-shrink: 0;">${colCards.length}</span>
+          </div>
           <div class="column-code">${esc(col.code || '')}</div>
         </div>
         <div class="column-actions">
@@ -1944,7 +1947,10 @@ async function checkShareMode() {
           <div class="column-header">
             ${note.share_perm === 'edit' ? `<span class="column-drag-handle">⠿</span>` : ''}
             <div class="column-info">
-              <div class="column-name">${esc(col.name)}</div>
+              <div class="column-name" style="display: flex; align-items: center; gap: 6px;">
+                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(col.name)}</span>
+                <span class="column-card-count" style="font-size: 10px; font-weight: 500; color: var(--text-2); background: var(--surface2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 10px; flex-shrink: 0;">${colCards.length}</span>
+              </div>
               <div class="column-code">${esc(col.code || '')}</div>
             </div>
             ${note.share_perm === 'edit' ? `
