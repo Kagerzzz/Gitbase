@@ -1222,11 +1222,16 @@ function esc(s) {
 // STATE
 let notes = [], current = null, saveTimer = null, sharePerm = 'view', shareGen = false;
 let dragSrcId = null;
+let isDraggingFromColumnHandle = false;
 
 // Chống lỗi autosave ghi nhầm tab:
 // - Mỗi lần lưu phải chụp snapshot gồm id + title + content tại thời điểm phát sinh thay đổi.
 // - Tuyệt đối không dùng `current` sau khi await, vì user có thể đã chuyển sang note khác.
 let isOpeningNote = false;
+
+window.addEventListener('mouseup', () => {
+  isDraggingFromColumnHandle = false;
+});
 
 // ===== KANBAN VIEW & SWITCHER LOGIC =====
 let currentView = 'note';
@@ -1310,6 +1315,7 @@ function renderKanbanBoard() {
     const colEl = document.createElement('div');
     colEl.className = 'kanban-column';
     colEl.dataset.id = col.id;
+    colEl.draggable = true;
     
     const colCards = data.cards
       .filter(c => c.column_id === col.id)
@@ -1361,9 +1367,7 @@ function renderKanbanBoard() {
     `;
     
     const dragHandle = colEl.querySelector('.column-drag-handle');
-    dragHandle.addEventListener('mousedown', () => { colEl.draggable = true; });
-    dragHandle.addEventListener('mouseup', () => { colEl.draggable = false; });
-    dragHandle.addEventListener('dragend', () => { colEl.draggable = false; });
+    dragHandle.addEventListener('mousedown', () => { isDraggingFromColumnHandle = true; });
     
     // Bind col header clicks to rename
     colEl.querySelector('.column-info').onclick = () => openColumnModal(col);
@@ -1433,12 +1437,17 @@ function renderKanbanBoard() {
 let dragColId = null;
 function setupColumnDragDrop(el, colId) {
   el.addEventListener('dragstart', e => {
+    if (!isDraggingFromColumnHandle) {
+      e.preventDefault();
+      return;
+    }
     dragColId = colId;
     el.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
   });
   el.addEventListener('dragend', () => {
     el.classList.remove('dragging');
+    isDraggingFromColumnHandle = false;
     document.querySelectorAll('.kanban-column').forEach(c => c.classList.remove('drag-over'));
   });
   el.addEventListener('dragover', e => {
@@ -1888,6 +1897,9 @@ async function checkShareMode() {
         const colEl = document.createElement('div');
         colEl.className = 'kanban-column';
         colEl.dataset.id = col.id;
+        if (note.share_perm === 'edit') {
+          colEl.draggable = true;
+        }
         
         const colCards = note.kanban_data.cards
           .filter(c => c.column_id === col.id)
@@ -1941,9 +1953,7 @@ async function checkShareMode() {
         if (note.share_perm === 'edit') {
           const dragHandle = colEl.querySelector('.column-drag-handle');
           if (dragHandle) {
-            dragHandle.addEventListener('mousedown', () => { colEl.draggable = true; });
-            dragHandle.addEventListener('mouseup', () => { colEl.draggable = false; });
-            dragHandle.addEventListener('dragend', () => { colEl.draggable = false; });
+            dragHandle.addEventListener('mousedown', () => { isDraggingFromColumnHandle = true; });
           }
 
           colEl.querySelector('.col-edit').onclick = (e) => { e.stopPropagation(); openSharedColumnModal(col); };
@@ -2016,11 +2026,16 @@ async function checkShareMode() {
 
     function setupSharedColumnDragDrop(el, colId) {
       el.addEventListener('dragstart', e => {
+        if (!isDraggingFromColumnHandle) {
+          e.preventDefault();
+          return;
+        }
         dragColId = colId;
         el.classList.add('dragging');
       });
       el.addEventListener('dragend', () => {
         el.classList.remove('dragging');
+        isDraggingFromColumnHandle = false;
         document.querySelectorAll('.kanban-column').forEach(c => c.classList.remove('drag-over'));
       });
       el.addEventListener('dragover', e => {
