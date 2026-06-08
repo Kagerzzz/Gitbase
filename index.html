@@ -127,7 +127,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
 .share-logo { font-family: var(--serif); font-size: 17px; font-weight: 300; font-style: italic; color: var(--accent); }
 .share-pill { font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border2); color: var(--text-2); }
 .share-pill.edit { border-color: var(--amber); color: var(--amber); }
-.share-body { flex: 1; overflow-y: auto; padding: 48px 24px; max-width: 900px; margin: 0 auto; width: 100%; }
+.share-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 24px; max-width: 900px; margin: 0 auto; width: 100%; }
 
 /* APP */
 #app { display: none; height: 100vh; flex-direction: column; }
@@ -868,11 +868,18 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
 }
 #s-kanban-wrap {
   display: none;
+  flex: 1;
   overflow-x: auto;
   overflow-y: hidden;
-  padding-bottom: 16px;
-  min-height: 450px;
-  height: calc(100vh - 160px);
+}
+#s-note-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+.share-body.kanban-active {
+  max-width: 100%;
+  padding: 20px;
 }
 </style>
 </head>
@@ -1870,18 +1877,21 @@ async function checkShareMode() {
       const sTabKanban = document.getElementById('s-tab-kanban');
       const sNoteWrap = document.getElementById('s-note-wrap');
       const sKanbanWrap = document.getElementById('s-kanban-wrap');
+      const shareBody = document.getElementById('share-body');
       
       if (view === 'kanban') {
         sTabNote.classList.remove('active');
         sTabKanban.classList.add('active');
         sNoteWrap.style.display = 'none';
         sKanbanWrap.style.display = 'block';
+        shareBody.classList.add('kanban-active');
         renderSharedKanbanBoard();
       } else {
         sTabNote.classList.add('active');
         sTabKanban.classList.remove('active');
         sNoteWrap.style.display = 'block';
         sKanbanWrap.style.display = 'none';
+        shareBody.classList.remove('kanban-active');
       }
     }
 
@@ -1918,7 +1928,7 @@ async function checkShareMode() {
           const codeHtml = c.code ? `<span class="card-code">${esc(c.code)}</span>` : '';
           const descHtml = c.content ? `<div class="card-desc-preview">${esc(c.content)}</div>` : '';
           cardsHtml += `
-            <div class="kanban-card" data-id="${c.id}">
+            <div class="kanban-card" data-id="${c.id}" ${note.share_perm === 'edit' ? 'draggable="true"' : ''}>
               ${note.share_perm === 'edit' ? `<span class="card-drag-handle">⠿</span>` : ''}
               <div class="card-header-row">
                 <div class="card-title">${esc(c.name || 'Thẻ không tên')}</div>
@@ -1964,7 +1974,10 @@ async function checkShareMode() {
           colEl.querySelectorAll('.kanban-card').forEach(cardEl => {
             const cardId = cardEl.dataset.id;
             const card = note.kanban_data.cards.find(x => x.id === cardId);
-            cardEl.onclick = () => openSharedCardModal(card, col.id);
+            cardEl.onclick = (e) => {
+              if (e.target.closest('.card-drag-handle')) return;
+              openSharedCardModal(card, col.id);
+            };
             setupSharedCardDragDrop(cardEl, cardId);
           });
           
@@ -2032,6 +2045,7 @@ async function checkShareMode() {
         }
         dragColId = colId;
         el.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
       });
       el.addEventListener('dragend', () => {
         el.classList.remove('dragging');
@@ -2063,6 +2077,7 @@ async function checkShareMode() {
       el.addEventListener('dragstart', e => {
         dragCardId = cardId;
         el.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
         e.stopPropagation();
       });
       el.addEventListener('dragend', () => {
