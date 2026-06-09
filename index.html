@@ -647,26 +647,67 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
   text-transform: uppercase;
 }
 .column-actions {
-  display: flex;
-  gap: 2px;
+  position: relative;
+  display: inline-block;
 }
 .col-act-btn {
   background: transparent;
   border: none;
   color: var(--text-3);
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 4px 6px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 12px;
   transition: all .12s;
+  line-height: 1;
 }
 .col-act-btn:hover {
   color: var(--text);
   background: var(--surface2);
 }
-.col-act-btn.col-del:hover {
+.col-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.4);
+  z-index: 10;
+  display: none;
+  flex-direction: column;
+  min-width: 140px;
+  padding: 4px 0;
+}
+.col-menu-dropdown.open {
+  display: flex;
+}
+.col-menu-item {
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 6px 12px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .12s;
+  width: 100%;
+}
+.col-menu-item:hover {
+  background: var(--surface3);
+  color: var(--text);
+}
+.col-menu-item.danger {
   color: var(--red);
+}
+.col-menu-item.danger:hover {
   background: rgba(248, 113, 113, 0.1);
+  color: var(--red);
 }
 .card-list {
   flex: 1;
@@ -1240,6 +1281,10 @@ window.addEventListener('mouseup', () => {
   isDraggingFromColumnHandle = false;
 });
 
+window.addEventListener('click', () => {
+  document.querySelectorAll('.col-menu-dropdown').forEach(d => d.classList.remove('open'));
+});
+
 // ===== KANBAN VIEW & SWITCHER LOGIC =====
 let currentView = 'note';
 
@@ -1309,6 +1354,37 @@ function getActiveKanbanData() {
   return current.kanban_data;
 }
 
+function copyColumnContent(colId, isShared = false) {
+  let cards = [];
+  if (isShared) {
+    if (typeof note !== 'undefined' && note.kanban_data) {
+      cards = note.kanban_data.cards.filter(c => c.column_id === colId);
+    }
+  } else {
+    const data = getActiveKanbanData();
+    cards = data.cards.filter(c => c.column_id === colId);
+  }
+  
+  cards.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+  
+  if (cards.length === 0) {
+    toast('Cột không có thẻ nào để sao chép!');
+    return;
+  }
+  
+  const text = cards.map(c => {
+    const title = c.name || 'Thẻ không tên';
+    const content = c.content || '';
+    return `${title}\n${content}`;
+  }).join('\n\n');
+  
+  navigator.clipboard.writeText(text).then(() => {
+    toast('✓ Đã sao chép nội dung cột');
+  }).catch(err => {
+    toast('Lỗi sao chép: ' + err.message);
+  });
+}
+
 // Render Kanban Board
 function renderKanbanBoard() {
   const board = document.getElementById('kanban-board');
@@ -1376,8 +1452,12 @@ function renderKanbanBoard() {
           <div class="column-code">${esc(col.code || '')}</div>
         </div>
         <div class="column-actions">
-          <button class="col-act-btn col-edit" title="Sửa cột">✎</button>
-          <button class="col-act-btn col-del" title="Xóa cột">✕</button>
+          <button class="col-act-btn col-menu-trigger" title="Lựa chọn">⋮</button>
+          <div class="col-menu-dropdown">
+            <button class="col-menu-item col-copy" type="button">📋 Sao chép nội dung</button>
+            <button class="col-menu-item col-edit" type="button">✎ Sửa cột</button>
+            <button class="col-menu-item col-del danger" type="button">✕ Xóa cột</button>
+          </div>
         </div>
       </div>
       <div class="card-list" data-column-id="${col.id}">
@@ -1391,8 +1471,35 @@ function renderKanbanBoard() {
     
     // Bind col header clicks to rename
     colEl.querySelector('.column-info').onclick = () => openColumnModal(col);
-    colEl.querySelector('.col-edit').onclick = () => openColumnModal(col);
-    colEl.querySelector('.col-del').onclick = () => deleteColumn(col.id);
+    
+    const triggerBtn = colEl.querySelector('.col-menu-trigger');
+    const dropdown = colEl.querySelector('.col-menu-dropdown');
+    triggerBtn.onclick = (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.col-menu-dropdown').forEach(d => {
+        if (d !== dropdown) d.classList.remove('open');
+      });
+      dropdown.classList.toggle('open');
+    };
+
+    colEl.querySelector('.col-copy').onclick = (e) => {
+      e.stopPropagation();
+      dropdown.classList.remove('open');
+      copyColumnContent(col.id, false);
+    };
+
+    colEl.querySelector('.col-edit').onclick = (e) => {
+      e.stopPropagation();
+      dropdown.classList.remove('open');
+      openColumnModal(col);
+    };
+
+    colEl.querySelector('.col-del').onclick = (e) => {
+      e.stopPropagation();
+      dropdown.classList.remove('open');
+      deleteColumn(col.id);
+    };
+
     colEl.querySelector('.btn-add-card').onclick = () => openCardModal(null, col.id);
     
     colEl.querySelectorAll('.kanban-card').forEach(cardEl => {
@@ -1985,10 +2092,18 @@ async function checkShareMode() {
             </div>
             ${note.share_perm === 'edit' ? `
               <div class="column-actions">
-                <button class="col-act-btn col-edit" title="Sửa cột">✎</button>
-                <button class="col-act-btn col-del" title="Xóa cột">✕</button>
+                <button class="col-act-btn col-menu-trigger" title="Lựa chọn">⋮</button>
+                <div class="col-menu-dropdown">
+                  <button class="col-menu-item col-copy" type="button">📋 Sao chép nội dung</button>
+                  <button class="col-menu-item col-edit" type="button">✎ Sửa cột</button>
+                  <button class="col-menu-item col-del danger" type="button">✕ Xóa cột</button>
+                </div>
               </div>
-            ` : ''}
+            ` : `
+              <div class="column-actions">
+                <button class="col-act-btn col-copy-direct" title="Sao chép nội dung">📋</button>
+              </div>
+            `}
           </div>
           <div class="card-list" data-column-id="${col.id}">
             ${cardsHtml}
@@ -2002,8 +2117,37 @@ async function checkShareMode() {
             dragHandle.addEventListener('mousedown', () => { isDraggingFromColumnHandle = true; });
           }
 
-          colEl.querySelector('.col-edit').onclick = (e) => { e.stopPropagation(); openSharedColumnModal(col); };
-          colEl.querySelector('.col-del').onclick = (e) => { e.stopPropagation(); deleteSharedColumn(col.id); };
+          const triggerBtn = colEl.querySelector('.col-menu-trigger');
+          const dropdown = colEl.querySelector('.col-menu-dropdown');
+          if (triggerBtn && dropdown) {
+            triggerBtn.onclick = (e) => {
+              e.stopPropagation();
+              document.querySelectorAll('.col-menu-dropdown').forEach(d => {
+                if (d !== dropdown) d.classList.remove('open');
+              });
+              dropdown.classList.toggle('open');
+            };
+          }
+
+          const copyBtn = colEl.querySelector('.col-copy');
+          if (copyBtn) {
+            copyBtn.onclick = (e) => {
+              e.stopPropagation();
+              dropdown.classList.remove('open');
+              copyColumnContent(col.id, true);
+            };
+          }
+
+          const editBtn = colEl.querySelector('.col-edit');
+          if (editBtn) {
+            editBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.remove('open'); openSharedColumnModal(col); };
+          }
+
+          const delBtn = colEl.querySelector('.col-del');
+          if (delBtn) {
+            delBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.remove('open'); deleteSharedColumn(col.id); };
+          }
+
           colEl.querySelector('.btn-add-card').onclick = (e) => { e.stopPropagation(); openSharedCardModal(null, col.id); };
           
           setupSharedColumnDragDrop(colEl, col.id);
@@ -2047,6 +2191,14 @@ async function checkShareMode() {
             dragCardId = null;
           });
         } else {
+          const copyDirectBtn = colEl.querySelector('.col-copy-direct');
+          if (copyDirectBtn) {
+            copyDirectBtn.onclick = (e) => {
+              e.stopPropagation();
+              copyColumnContent(col.id, true);
+            };
+          }
+
           colEl.querySelectorAll('.kanban-card').forEach(cardEl => {
             const cardId = cardEl.dataset.id;
             const card = note.kanban_data.cards.find(x => x.id === cardId);
