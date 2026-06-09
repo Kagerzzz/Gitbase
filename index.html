@@ -1313,6 +1313,16 @@ function getActiveKanbanData() {
 function renderKanbanBoard() {
   const board = document.getElementById('kanban-board');
   if (!board) return;
+
+  // Save scroll positions
+  const kanbanWrap = document.getElementById('kanban-wrap');
+  const boardScrollLeft = kanbanWrap ? kanbanWrap.scrollLeft : 0;
+  const colScrollTops = {};
+  board.querySelectorAll('.card-list').forEach(list => {
+    const colId = list.dataset.columnId;
+    if (colId) colScrollTops[colId] = list.scrollTop;
+  });
+
   board.innerHTML = '';
   
   const data = getActiveKanbanData();
@@ -1441,6 +1451,15 @@ function renderKanbanBoard() {
   addColBtn.innerHTML = '<span>+ Thêm cột</span>';
   addColBtn.onclick = () => openColumnModal(null);
   board.appendChild(addColBtn);
+
+  // Restore scroll positions
+  if (kanbanWrap) kanbanWrap.scrollLeft = boardScrollLeft;
+  board.querySelectorAll('.card-list').forEach(list => {
+    const colId = list.dataset.columnId;
+    if (colId && colScrollTops[colId] !== undefined) {
+      list.scrollTop = colScrollTops[colId];
+    }
+  });
 }
 
 // Column Drag & Drop
@@ -1903,6 +1922,17 @@ async function checkShareMode() {
 
     function renderSharedKanbanBoard() {
       const board = document.getElementById('s-kanban-board');
+      if (!board) return;
+
+      // Save scroll positions
+      const sKanbanWrap = document.getElementById('s-kanban-wrap');
+      const boardScrollLeft = sKanbanWrap ? sKanbanWrap.scrollLeft : 0;
+      const colScrollTops = {};
+      board.querySelectorAll('.card-list').forEach(list => {
+        const colId = list.dataset.columnId;
+        if (colId) colScrollTops[colId] = list.scrollTop;
+      });
+
       board.innerHTML = '';
       const sortedColumns = [...note.kanban_data.columns].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
       
@@ -2033,6 +2063,15 @@ async function checkShareMode() {
         addColBtn.onclick = () => openSharedColumnModal(null);
         board.appendChild(addColBtn);
       }
+
+      // Restore scroll positions
+      if (sKanbanWrap) sKanbanWrap.scrollLeft = boardScrollLeft;
+      board.querySelectorAll('.card-list').forEach(list => {
+        const colId = list.dataset.columnId;
+        if (colId && colScrollTops[colId] !== undefined) {
+          list.scrollTop = colScrollTops[colId];
+        }
+      });
     }
 
     function reorderSharedCards() {
