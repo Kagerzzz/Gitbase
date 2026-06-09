@@ -1354,17 +1354,13 @@ function getActiveKanbanData() {
   return current.kanban_data;
 }
 
-function copyColumnContent(colId, isShared = false) {
-  let cards = [];
-  if (isShared) {
-    if (typeof note !== 'undefined' && note.kanban_data) {
-      cards = note.kanban_data.cards.filter(c => c.column_id === colId);
-    }
-  } else {
-    const data = getActiveKanbanData();
-    cards = data.cards.filter(c => c.column_id === colId);
+function copyColumnContent(colId, cardsArray) {
+  if (!Array.isArray(cardsArray)) {
+    toast('Cột không có thẻ nào để sao chép!');
+    return;
   }
   
+  const cards = cardsArray.filter(c => c.column_id === colId);
   cards.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
   
   if (cards.length === 0) {
@@ -1485,7 +1481,7 @@ function renderKanbanBoard() {
     colEl.querySelector('.col-copy').onclick = (e) => {
       e.stopPropagation();
       dropdown.classList.remove('open');
-      copyColumnContent(col.id, false);
+      copyColumnContent(col.id, getActiveKanbanData().cards);
     };
 
     colEl.querySelector('.col-edit').onclick = (e) => {
@@ -2134,7 +2130,7 @@ async function checkShareMode() {
             copyBtn.onclick = (e) => {
               e.stopPropagation();
               dropdown.classList.remove('open');
-              copyColumnContent(col.id, true);
+              copyColumnContent(col.id, note.kanban_data.cards);
             };
           }
 
@@ -2195,7 +2191,7 @@ async function checkShareMode() {
           if (copyDirectBtn) {
             copyDirectBtn.onclick = (e) => {
               e.stopPropagation();
-              copyColumnContent(col.id, true);
+              copyColumnContent(col.id, note.kanban_data.cards);
             };
           }
 
