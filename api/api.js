@@ -59,6 +59,157 @@ function getSupabase() {
   });
 }
 
+function generateDiffLogs(oldNote, newNote) {
+  const logs = [];
+
+  // 1. Compare Title
+  if (newNote.title !== undefined && newNote.title !== oldNote.title) {
+    logs.push({
+      action: 'update_title',
+      description: `Đã đổi tiêu đề ghi chú từ "${oldNote.title || 'Không có tiêu đề'}" thành "${newNote.title}"`
+    });
+  }
+
+  // 2. Compare Content
+  if (newNote.content !== undefined && newNote.content !== oldNote.content) {
+    logs.push({
+      action: 'update_content',
+      description: 'Đã chỉnh sửa nội dung văn bản ghi chú'
+    });
+  }
+
+  // 3. Compare Kanban Data
+  if (newNote.kanban_data !== undefined) {
+    const oldKanban = oldNote.kanban_data || { columns: [], cards: [] };
+    const newKanban = newNote.kanban_data || { columns: [], cards: [] };
+
+    const oldCols = Array.isArray(oldKanban.columns) ? oldKanban.columns : [];
+    const newCols = Array.isArray(newKanban.columns) ? newKanban.columns : [];
+    const oldCards = Array.isArray(oldKanban.cards) ? oldKanban.cards : [];
+    const newCards = Array.isArray(newKanban.cards) ? newKanban.cards : [];
+
+    // Compare Columns
+    const oldColsMap = new Map(oldCols.map(c => [c.id, c]));
+    const newColsMap = new Map(newCols.map(c => [c.id, c]));
+
+    // Added Columns
+    for (const [id, col] of newColsMap) {
+      if (!oldColsMap.has(id)) {
+        logs.push({
+          action: 'kanban_column_add',
+          description: `[Bảng Kanban] Đã thêm cột mới: "${col.name}"`
+        });
+      }
+    }
+
+    // Deleted Columns
+    for (const [id, col] of oldColsMap) {
+      if (!newColsMap.has(id)) {
+        logs.push({
+          action: 'kanban_column_delete',
+          description: `[Bảng Kanban] Đã xóa cột: "${col.name}"`
+        });
+      }
+    }
+
+    // Modified Columns
+    for (const [id, newCol] of newColsMap) {
+      const oldCol = oldColsMap.get(id);
+      if (oldCol) {
+        if (newCol.name !== oldCol.name) {
+          logs.push({
+            action: 'kanban_column_rename',
+            description: `[Bảng Kanban] Đã đổi tên cột từ "${oldCol.name}" thành "${newCol.name}"`
+          });
+        }
+        if (newCol.code !== oldCol.code) {
+          logs.push({
+            action: 'kanban_column_edit_code',
+            description: `[Bảng Kanban] Đã đổi mã cột "${newCol.name}" từ "${oldCol.code || 'trống'}" thành "${newCol.code || 'trống'}"`
+          });
+        }
+      }
+    }
+
+    // Compare Cards
+    const oldCardsMap = new Map(oldCards.map(c => [c.id, c]));
+    const newCardsMap = new Map(newCards.map(c => [c.id, c]));
+
+    // Added Cards
+    for (const [id, card] of newCardsMap) {
+      if (!oldCardsMap.has(id)) {
+        const col = newColsMap.get(card.column_id);
+        const colName = col ? col.name : 'Không rõ';
+        logs.push({
+          action: 'kanban_card_add',
+          description: `[Bảng Kanban] Đã tạo thẻ mới: "${card.name}" tại cột "${colName}"`
+        });
+      }
+    }
+
+    // Deleted Cards
+    for (const [id, card] of oldCardsMap) {
+      if (!newCardsMap.has(id)) {
+        logs.push({
+          action: 'kanban_card_delete',
+          description: `[Bảng Kanban] Đã xóa thẻ: "${card.name}"`
+        });
+      }
+    }
+
+    // Modified Cards
+    for (const [id, newCard] of newCardsMap) {
+      const oldCard = oldCardsMap.get(id);
+      if (oldCard) {
+        if (newCard.name !== oldCard.name) {
+          logs.push({
+            action: 'kanban_card_rename',
+            description: `[Bảng Kanban] Đã đổi tên thẻ từ "${oldCard.name}" thành "${newCard.name}"`
+          });
+        }
+        if (newCard.code !== oldCard.code) {
+          logs.push({
+            action: 'kanban_card_edit_code',
+            description: `[Bảng Kanban] Đã đổi mã thẻ "${newCard.name}" từ "${oldCard.code || 'trống'}" thành "${newCard.code || 'trống'}"`
+          });
+        }
+        if (newCard.content !== oldCard.content) {
+          logs.push({
+            action: 'kanban_card_edit_desc',
+            description: `[Bảng Kanban] Đã sửa mô tả chi tiết của thẻ "${newCard.name}"`
+          });
+        }
+        if (newCard.column_id !== oldCard.column_id) {
+          const oldCol = oldColsMap.get(oldCard.column_id) || newColsMap.get(oldCard.column_id);
+          const newCol = newColsMap.get(newCard.column_id);
+          const oldColName = oldCol ? oldCol.name : 'Không rõ';
+          const newColName = newCol ? newCol.name : 'Không rõ';
+          logs.push({
+            action: 'kanban_card_move',
+            description: `[Bảng Kanban] Đã chuyển thẻ "${newCard.name}" từ cột "${oldColName}" sang cột "${newColName}"`
+          });
+        }
+        // Compare attached images
+        const oldImgs = Array.isArray(oldCard.image_urls) ? oldCard.image_urls : [];
+        const newImgs = Array.isArray(newCard.image_urls) ? newCard.image_urls : [];
+        if (newImgs.length > oldImgs.length) {
+          logs.push({
+            action: 'kanban_card_add_img',
+            description: `[Bảng Kanban] Đã tải lên ảnh đính kèm mới cho thẻ "${newCard.name}"`
+          });
+        } else if (newImgs.length < oldImgs.length) {
+          logs.push({
+            action: 'kanban_card_del_img',
+            description: `[Bảng Kanban] Đã gỡ ảnh đính kèm khỏi thẻ "${newCard.name}"`
+          });
+        }
+      }
+    }
+  }
+
+  return logs;
+}
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return json(res, {}, 204);
   if (req.method !== 'POST') return err(res, 'API chỉ hỗ trợ POST');
@@ -136,6 +287,13 @@ export default async function handler(req, res) {
     if (action === 'updateNote') {
       const id = data.id || '';
       const now = nowISO();
+      const actor = data.actor || 'admin';
+
+      const { data: oldNote, error: getErr } = await db
+        .from('notes')
+        .select('title,content,kanban_data')
+        .eq('id', id)
+        .maybeSingle();
 
       const updateData = { updated_at: now };
       if (data.title !== undefined) updateData.title = data.title;
@@ -149,6 +307,51 @@ export default async function handler(req, res) {
         .eq('id', id)
         .select('id');
       if (error) throw error;
+
+      if (!getErr && oldNote && (rows || []).length > 0) {
+        const diffLogs = generateDiffLogs(oldNote, data);
+        if (diffLogs.length > 0) {
+          try {
+            const timeThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+            for (const log of diffLogs) {
+              if (['update_content', 'kanban_card_edit_desc', 'update_title'].includes(log.action)) {
+                const { data: existing, error: qErr } = await db
+                  .from('note_logs')
+                  .select('id')
+                  .eq('note_id', id)
+                  .eq('actor', actor)
+                  .eq('action', log.action)
+                  .gte('created_at', timeThreshold)
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+
+                if (!qErr && existing) {
+                  await db
+                    .from('note_logs')
+                    .update({
+                      description: log.description,
+                      created_at: now
+                    })
+                    .eq('id', existing.id);
+                  continue;
+                }
+              }
+
+              await db.from('note_logs').insert({
+                note_id: id,
+                actor: actor,
+                action: log.action,
+                description: log.description,
+                created_at: now
+              });
+            }
+          } catch (logErr) {
+            console.error("Lỗi ghi lịch sử hoạt động:", logErr);
+          }
+        }
+      }
+
       return json(res, { success: (rows || []).length > 0 });
     }
 
@@ -264,6 +467,17 @@ export default async function handler(req, res) {
       }
 
       return json(res, { success: true });
+    }
+
+    if (action === 'getNoteLogs') {
+      const note_id = data.note_id || '';
+      const { data: logs, error } = await db
+        .from('note_logs')
+        .select('id,actor,action,description,created_at')
+        .eq('note_id', note_id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return json(res, logs || []);
     }
 
     return err(res, 'Action không hợp lệ');
