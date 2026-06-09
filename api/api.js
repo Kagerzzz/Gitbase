@@ -59,6 +59,113 @@ function getSupabase() {
   });
 }
 
+function stripHtml(html) {
+  if (!html) return '';
+  let text = html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function truncateDiff(str, maxLen = 100) {
+  if (!str) return '';
+  const clean = str.replace(/"/g, "'");
+  if (clean.length <= maxLen) return clean;
+  return clean.substring(0, maxLen) + '...';
+}
+
+function diffStrings(oldStr, newStr) {
+  const oldText = stripHtml(oldStr || '').trim();
+  const newText = stripHtml(newStr || '').trim();
+
+  if (oldText === newText) return '';
+  if (!oldText) return `thêm "${truncateDiff(newText)}"`;
+  if (!newText) return `bị xóa "${truncateDiff(oldText)}"`;
+
+
+  let start = 0;
+  while (start < oldText.length && start < newText.length && oldText[start] === newText[start]) {
+    start++;
+  }
+
+  let oldEnd = oldText.length - 1;
+  let newEnd = newText.length - 1;
+  while (oldEnd >= start && newEnd >= start && oldText[oldEnd] === newText[newEnd]) {
+    oldEnd--;
+    newEnd--;
+  }
+
+  const deleted = oldText.substring(start, oldEnd + 1).trim();
+  const added = newText.substring(start, newEnd + 1).trim();
+
+  if (deleted && added) {
+    return `chỉnh sửa từ "${truncateDiff(deleted)}" thành "${truncateDiff(added)}"`;
+  } else if (deleted) {
+    return `bị xóa "${truncateDiff(deleted)}"`;
+  } else if (added) {
+    return `thêm "${truncateDiff(added)}"`;
+  }
+
+  return 'chỉnh sửa nội dung';
+}
+
+function mergeLogDescriptions(oldDesc, newDesc) {
+  if (!oldDesc) return newDesc;
+  if (!newDesc) return oldDesc;
+
+  // Handle update_title: Đã đổi tiêu đề ghi chú từ "A" thành "B"
+  const titleRegex = /^Đã đổi tiêu đề ghi chú từ "([\s\S]*?)" thành "([\s\S]*?)"$/;
+  const oldTitleMatch = oldDesc.match(titleRegex);
+  const newTitleMatch = newDesc.match(titleRegex);
+
+  if (oldTitleMatch && newTitleMatch) {
+    const oldFrom = oldTitleMatch[1];
+    const oldTo = oldTitleMatch[2];
+    const newFrom = newTitleMatch[1];
+    const newTo = newTitleMatch[2];
+
+    if (oldTo === newFrom) {
+      return `Đã đổi tiêu đề ghi chú từ "${truncateDiff(oldFrom)}" thành "${truncateDiff(newTo)}"`;
+    }
+  }
+
+  const regex = /^(.*?,\s*)(thêm|bị xóa|chỉnh sửa từ)\s+"([\s\S]*?)"(?:\s+thành\s+"([\s\S]*?)")?$/;
+  const oldMatch = oldDesc.match(regex);
+  const newMatch = newDesc.match(regex);
+
+  if (!oldMatch || !newMatch) {
+    return newDesc;
+  }
+
+  const [, oldPrefix, oldType, oldVal1, oldVal2] = oldMatch;
+  const [, newPrefix, newType, newVal1, newVal2] = newMatch;
+
+  if (oldPrefix !== newPrefix) return newDesc;
+
+  if (oldType === 'thêm' && newType === 'thêm') {
+    const merged = oldVal1 + newVal1;
+    return `${oldPrefix}thêm "${truncateDiff(merged)}"`;
+  }
+
+  if (oldType === 'bị xóa' && newType === 'bị xóa') {
+    const merged = newVal1 + oldVal1;
+    return `${oldPrefix}bị xóa "${truncateDiff(merged)}"`;
+  }
+
+  if (oldType === 'chỉnh sửa từ' && newType === 'chỉnh sửa từ') {
+    if (oldVal2 && oldVal2 === newVal1) {
+      return `${oldPrefix}chỉnh sửa từ "${truncateDiff(oldVal1)}" thành "${truncateDiff(newVal2)}"`;
+    }
+  }
+
+  return newDesc;
+}
+
 function generateDiffLogs(oldNote, newNote) {
   const logs = [];
 
@@ -72,16 +179,20 @@ function generateDiffLogs(oldNote, newNote) {
 
   // 2. Compare Content
   if (newNote.content !== undefined && newNote.content !== oldNote.content) {
-    logs.push({
-      action: 'update_content',
-      description: 'Đã chỉnh sửa nội dung văn bản ghi chú'
-    });
+    const diffText = diffStrings(oldNote.content, newNote.content);
+    if (diffText) {
+      logs.push({
+        action: 'update_content',
+        description: `Ghi chú "${oldNote.title || 'Không có tiêu đề'}", ${diffText}`
+      });
+    }
   }
 
   // 3. Compare Kanban Data
   if (newNote.kanban_data !== undefined) {
     const oldKanban = oldNote.kanban_data || { columns: [], cards: [] };
     const newKanban = newNote.kanban_data || { columns: [], cards: [] };
+
 
     const oldCols = Array.isArray(oldKanban.columns) ? oldKanban.columns : [];
     const newCols = Array.isArray(newKanban.columns) ? newKanban.columns : [];
@@ -174,10 +285,13 @@ function generateDiffLogs(oldNote, newNote) {
           });
         }
         if (newCard.content !== oldCard.content) {
-          logs.push({
-            action: 'kanban_card_edit_desc',
-            description: `[Bảng Kanban] Đã sửa mô tả chi tiết của thẻ "${newCard.name}"`
-          });
+          const diffText = diffStrings(oldCard.content, newCard.content);
+          if (diffText) {
+            logs.push({
+              action: 'kanban_card_edit_desc',
+              description: `[Bảng Kanban] Thẻ "${newCard.name}", ${diffText}`
+            });
+          }
         }
         if (newCard.column_id !== oldCard.column_id) {
           const oldCol = oldColsMap.get(oldCard.column_id) || newColsMap.get(oldCard.column_id);
@@ -317,7 +431,7 @@ export default async function handler(req, res) {
               if (['update_content', 'kanban_card_edit_desc', 'update_title'].includes(log.action)) {
                 const { data: existing, error: qErr } = await db
                   .from('note_logs')
-                  .select('id')
+                  .select('id, description')
                   .eq('note_id', id)
                   .eq('actor', actor)
                   .eq('action', log.action)
@@ -327,10 +441,11 @@ export default async function handler(req, res) {
                   .maybeSingle();
 
                 if (!qErr && existing) {
+                  const mergedDesc = mergeLogDescriptions(existing.description, log.description);
                   await db
                     .from('note_logs')
                     .update({
-                      description: log.description,
+                      description: mergedDesc,
                       created_at: now
                     })
                     .eq('id', existing.id);
