@@ -317,6 +317,120 @@ function generateDiffLogs(oldNote, newNote) {
             description: `[Bảng Kanban] Đã gỡ ảnh đính kèm khỏi thẻ "${newCard.name}"`
           });
         }
+    }
+  }
+}
+
+  // 4. Compare Sheet Data
+  if (newNote.sheet_data !== undefined) {
+    const oldSheet = oldNote.sheet_data || { columns: [], rows: [] };
+    const newSheet = newNote.sheet_data || { columns: [], rows: [] };
+
+    const oldCols = Array.isArray(oldSheet.columns) ? oldSheet.columns : [];
+    const newCols = Array.isArray(newSheet.columns) ? newSheet.columns : [];
+    const oldRows = Array.isArray(oldSheet.rows) ? oldSheet.rows : [];
+    const newRows = Array.isArray(newSheet.rows) ? newSheet.rows : [];
+
+    const oldColsMap = new Map(oldCols.map(c => [c.id, c]));
+    const newColsMap = new Map(newCols.map(c => [c.id, c]));
+
+    // Added Columns
+    for (const [id, col] of newColsMap) {
+      if (!oldColsMap.has(id)) {
+        logs.push({
+          action: 'sheet_column_add',
+          description: `[Bảng tính] Đã thêm cột mới: "${col.name}"`
+        });
+      }
+    }
+
+    // Deleted Columns
+    for (const [id, col] of oldColsMap) {
+      if (!newColsMap.has(id)) {
+        logs.push({
+          action: 'sheet_column_delete',
+          description: `[Bảng tính] Đã xóa cột: "${col.name}"`
+        });
+      }
+    }
+
+    // Modified Columns
+    for (const [id, newCol] of newColsMap) {
+      const oldCol = oldColsMap.get(id);
+      if (oldCol) {
+        if (newCol.name !== oldCol.name) {
+          logs.push({
+            action: 'sheet_column_rename',
+            description: `[Bảng tính] Đã đổi tên cột từ "${oldCol.name}" thành "${newCol.name}"`
+          });
+        }
+        if (newCol.width !== oldCol.width) {
+          logs.push({
+            action: 'sheet_resize',
+            description: `[Bảng tính] Đã thay đổi kích thước cột/hàng`
+          });
+        }
+      }
+    }
+
+    // Compare Rows
+    const oldRowsMap = new Map(oldRows.map(r => [r.id, r]));
+    const newRowsMap = new Map(newRows.map(r => [r.id, r]));
+
+    // Added Rows
+    for (const [id, row] of newRowsMap) {
+      if (!oldRowsMap.has(id)) {
+        logs.push({
+          action: 'sheet_row_add',
+          description: `[Bảng tính] Đã thêm hàng mới`
+        });
+      }
+    }
+
+    // Deleted Rows
+    for (const [id, row] of oldRowsMap) {
+      if (!newRowsMap.has(id)) {
+        logs.push({
+          action: 'sheet_row_delete',
+          description: `[Bảng tính] Đã xóa hàng`
+        });
+      }
+    }
+
+    // Modified Rows
+    for (const [id, newRow] of newRowsMap) {
+      const oldRow = oldRowsMap.get(id);
+      if (oldRow) {
+        if (newRow.height !== oldRow.height) {
+          logs.push({
+            action: 'sheet_resize',
+            description: `[Bảng tính] Đã thay đổi kích thước cột/hàng`
+          });
+        }
+
+        const oldCells = oldRow.cells || {};
+        const newCells = newRow.cells || {};
+
+        let cellChanged = false;
+        let lastDiffText = '';
+        let lastColName = '';
+        for (const colId of newColsMap.keys()) {
+          const oldVal = oldCells[colId] || '';
+          const newVal = newCells[colId] || '';
+          if (newVal !== oldVal) {
+            cellChanged = true;
+            const col = newColsMap.get(colId);
+            lastColName = col ? col.name : 'Không rõ';
+            lastDiffText = diffStrings(oldVal, newVal);
+          }
+        }
+
+        if (cellChanged && lastDiffText) {
+          logs.push({
+            action: 'sheet_cell_edit',
+            description: `[Bảng tính] Cột "${lastColName}", ${lastDiffText}`
+          });
+        }
       }
     }
   }
@@ -359,7 +473,7 @@ export default async function handler(req, res) {
     if (action === 'getNotes') {
       const { data: notes, error } = await db
         .from('notes')
-        .select('id,title,content,created_at,updated_at,share_token,share_perm,sort_order,default_view,kanban_data')
+        .select('id,title,content,created_at,updated_at,share_token,share_perm,sort_order,default_view,kanban_data,sheet_data')
         .order('sort_order', { ascending: true })
         .order('updated_at', { ascending: false });
 
@@ -405,7 +519,7 @@ export default async function handler(req, res) {
 
       const { data: oldNote, error: getErr } = await db
         .from('notes')
-        .select('title,content,kanban_data')
+        .select('title,content,kanban_data,sheet_data')
         .eq('id', id)
         .maybeSingle();
 
@@ -414,6 +528,7 @@ export default async function handler(req, res) {
       if (data.content !== undefined) updateData.content = data.content;
       if (data.default_view !== undefined) updateData.default_view = data.default_view;
       if (data.kanban_data !== undefined) updateData.kanban_data = data.kanban_data;
+      if (data.sheet_data !== undefined) updateData.sheet_data = data.sheet_data;
 
       const { data: rows, error } = await db
         .from('notes')
@@ -428,7 +543,7 @@ export default async function handler(req, res) {
           try {
             const timeThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
             for (const log of diffLogs) {
-              if (['update_content', 'kanban_card_edit_desc', 'update_title'].includes(log.action)) {
+              if (['update_content', 'kanban_card_edit_desc', 'update_title', 'sheet_cell_edit', 'sheet_resize'].includes(log.action)) {
                 const { data: existing, error: qErr } = await db
                   .from('note_logs')
                   .select('id, description')
@@ -508,7 +623,7 @@ export default async function handler(req, res) {
       const token = data.token || '';
       const { data: note, error } = await db
         .from('notes')
-        .select('id,title,content,share_perm,default_view,kanban_data')
+        .select('id,title,content,share_perm,default_view,kanban_data,sheet_data')
         .eq('share_token', token)
         .neq('share_token', '')
         .neq('share_perm', 'private')
