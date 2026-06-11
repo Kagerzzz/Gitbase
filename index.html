@@ -932,11 +932,27 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
   position: relative;
 }
 .sheet-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   font-size: 13px;
   color: var(--text);
   table-layout: fixed;
+}
+.sheet-col-header-input {
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  width: 100%;
+  padding: 4px 0;
+}
+.sheet-col-header-input:focus {
+  color: var(--text);
+  border-bottom: 1px solid var(--accent);
 }
 .sheet-table th, .sheet-table td {
   border-bottom: 1px solid var(--border);
@@ -1344,10 +1360,6 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
 
         <!-- Sheet Workspace -->
         <div id="sheet-wrap" style="display:none;">
-          <div class="sheet-actions-bar">
-            <button class="btn-primary" id="btn-sheet-add-row" style="padding: 8px 14px; font-size: 13px;">＋ Thêm hàng (Dòng)</button>
-            <button class="btn-secondary" id="btn-sheet-add-col" style="padding: 8px 14px; font-size: 13px;">＋ Thêm cột</button>
-          </div>
           <div class="sheet-table-container">
             <table class="sheet-table">
               <thead id="sheet-thead">
