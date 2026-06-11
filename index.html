@@ -932,7 +932,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
   position: relative;
 }
 .sheet-table {
-  width: max-content;
+  width: 100%;
   border-collapse: collapse;
   font-size: 13px;
   color: var(--text);
@@ -1850,7 +1850,7 @@ function renderSheetTable() {
   });
   
   headerHtml += `
-    <th style="width: 110px; min-width: 110px; max-width: 110px; text-align: center; background: var(--surface); border-right: none;">
+    <th style="width: auto; min-width: 110px; text-align: center; background: var(--surface); border-right: none;">
       <button class="sheet-btn-transparent" id="btn-sheet-header-add-col" style="margin: auto;" title="Thêm cột">＋ Thêm cột</button>
     </th>
   `;
@@ -2988,7 +2988,7 @@ async function checkShareMode() {
       
       if (isEdit) {
         headerHtml += `
-          <th style="width: 110px; min-width: 110px; max-width: 110px; text-align: center; background: var(--surface); border-right: none;">
+          <th style="width: auto; min-width: 110px; text-align: center; background: var(--surface); border-right: none;">
             <button class="sheet-btn-transparent" id="btn-s-sheet-header-add-col" style="margin: auto;" title="Thêm cột">＋ Thêm cột</button>
           </th>
         `;
