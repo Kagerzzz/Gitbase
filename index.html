@@ -907,6 +907,9 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
 #editor-panel.sheet-active #sheet-wrap {
   display: flex !important;
 }
+#editor-panel.sheet-active #sheet-options-toolbar {
+  display: inline-flex !important;
+}
 
 /* ===== SHEET / TABLE VIEW ===== */
 #sheet-wrap {
@@ -1381,6 +1384,11 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
             <div class="tb-sep"></div>
           </div>
 
+          <!-- Switch button (Xuống dòng / Cắt dòng) small size -->
+          <div class="sheet-toggle-group" id="sheet-options-toolbar" style="display: none; background: var(--surface2); padding: 2px; border-radius: 6px; border: 1px solid var(--border); margin-right: 8px; align-items: center; flex-shrink: 0;">
+            <button class="sheet-toggle-btn" id="btn-sheet-wrap-text" style="font-size: 11px; padding: 3px 8px; border: none; background: none; border-radius: 4px; color: var(--text-2); cursor: pointer; font-family: var(--mono); transition: all 0.2s;">↩ Xuống</button>
+            <button class="sheet-toggle-btn" id="btn-sheet-clip-text" style="font-size: 11px; padding: 3px 8px; border: none; background: none; border-radius: 4px; color: var(--text-2); cursor: pointer; font-family: var(--mono); transition: all 0.2s;">⇥ Cắt</button>
+          </div>
           <button class="tb-btn" id="btn-history" title="Xem lịch sử hoạt động" style="font-size:13px">🕒</button>
           <button class="tb-btn" id="btn-reload-note" title="Tải lại ghi chú" style="font-size:14px">↻</button>
         </div>
@@ -1397,13 +1405,6 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
 
         <!-- Sheet Workspace -->
         <div id="sheet-wrap" style="display:none; flex-direction: column;">
-          <div class="sheet-options-bar" style="display: flex; gap: 12px; margin-bottom: 8px; align-items: center;">
-            <span style="font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 1px;">Hiển thị:</span>
-            <div class="sheet-toggle-group" style="display: inline-flex; background: var(--surface2); padding: 3px; border-radius: 6px; border: 1px solid var(--border);">
-              <button class="sheet-toggle-btn" id="btn-sheet-wrap-text" style="font-size: 12px; padding: 4px 12px; border: none; background: none; border-radius: 4px; color: var(--text-2); cursor: pointer; font-family: var(--mono); transition: all 0.2s;">↩ Xuống dòng</button>
-              <button class="sheet-toggle-btn" id="btn-sheet-clip-text" style="font-size: 12px; padding: 4px 12px; border: none; background: none; border-radius: 4px; color: var(--text-2); cursor: pointer; font-family: var(--mono); transition: all 0.2s;">⇥ Cắt dòng</button>
-            </div>
-          </div>
           <div class="sheet-table-container">
             <table class="sheet-table">
               <thead id="sheet-thead">
@@ -1916,7 +1917,8 @@ function renderSheetTable() {
   // 2. Render Body
   let bodyHtml = '';
   data.rows.forEach((row, rowIndex) => {
-    const heightStyle = row.height ? `style="height: ${row.height}px;"` : '';
+    const rowHeight = isClip ? (row.height || 38) : 'auto';
+    const heightStyle = `style="height: ${rowHeight}${rowHeight === 'auto' ? '' : 'px'};"`;
     bodyHtml += `<tr ${heightStyle} data-row-id="${row.id}">`;
     bodyHtml += `
       <td style="text-align: center; position: relative; ${sttStyle}">
@@ -2911,11 +2913,15 @@ async function checkShareMode() {
           ? `<input id="s-title" value="${esc(note.title)}" style="width:100%;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text);font-family:var(--serif);font-size:26px;font-weight:300;padding:0 0 14px;outline:none;margin-bottom:20px"/>`
           : `<h1 id="s-title-static" style="font-family:var(--serif);font-size:28px;font-weight:300;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:14px;">${esc(note.title)}</h1>`
         }
-        <div class="view-switcher-bar" style="padding: 0; background: transparent; height: 36px; border-bottom: 1px solid var(--border); margin-bottom: 16px;">
+        <div class="view-switcher-bar" style="padding: 0; background: transparent; height: 36px; border-bottom: 1px solid var(--border); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
           <div class="switcher-tabs">
             <button class="switch-tab active" data-sview="note" id="s-tab-note" style="height: 30px;">📝 Ghi chú</button>
             <button class="switch-tab" data-sview="kanban" id="s-tab-kanban" style="height: 30px;">📋 Bảng (Kanban)</button>
             <button class="switch-tab" data-sview="sheet" id="s-tab-sheet" style="height: 30px;">📊 Bảng tính</button>
+          </div>
+          <div class="sheet-toggle-group" id="s-sheet-options-bar" style="display: none; background: var(--surface2); padding: 2px; border-radius: 6px; border: 1px solid var(--border); align-items: center; flex-shrink: 0;">
+            <button class="sheet-toggle-btn" id="btn-s-sheet-wrap-text" style="font-size: 11px; padding: 3px 8px; border: none; background: none; border-radius: 4px; color: var(--text-2); cursor: pointer; font-family: var(--mono); transition: all 0.2s;">↩ Xuống</button>
+            <button class="sheet-toggle-btn" id="btn-s-sheet-clip-text" style="font-size: 11px; padding: 3px 8px; border: none; background: none; border-radius: 4px; color: var(--text-2); cursor: pointer; font-family: var(--mono); transition: all 0.2s;">⇥ Cắt</button>
           </div>
         </div>
       </div>
@@ -2929,13 +2935,6 @@ async function checkShareMode() {
         <div id="s-kanban-board" class="kanban-board-shared"></div>
       </div>
       <div id="s-sheet-wrap" style="display:none; width:100%; flex-direction: column;">
-        <div class="sheet-options-bar" id="s-sheet-options-bar" style="display: none; gap: 12px; margin-bottom: 8px; align-items: center;">
-          <span style="font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 1px;">Hiển thị:</span>
-          <div class="sheet-toggle-group" style="display: inline-flex; background: var(--surface2); padding: 3px; border-radius: 6px; border: 1px solid var(--border);">
-            <button class="sheet-toggle-btn" id="btn-s-sheet-wrap-text" style="font-size: 12px; padding: 4px 12px; border: none; background: none; border-radius: 4px; color: var(--text-2); cursor: pointer; font-family: var(--mono); transition: all 0.2s;">↩ Xuống dòng</button>
-            <button class="sheet-toggle-btn" id="btn-s-sheet-clip-text" style="font-size: 12px; padding: 4px 12px; border: none; background: none; border-radius: 4px; color: var(--text-2); cursor: pointer; font-family: var(--mono); transition: all 0.2s;">⇥ Cắt dòng</button>
-          </div>
-        </div>
         <div class="sheet-table-container">
           <table class="sheet-table">
             <thead id="s-sheet-thead">
@@ -2971,6 +2970,9 @@ async function checkShareMode() {
       sNoteWrap.style.display = 'none';
       sKanbanWrap.style.display = 'none';
       sSheetWrap.style.display = 'none';
+      
+      const sBar = document.getElementById('s-sheet-options-bar');
+      if (sBar) sBar.style.display = 'none';
 
       sTabNote.classList.toggle('active', view === 'note');
       sTabKanban.classList.toggle('active', view === 'kanban');
@@ -3129,7 +3131,8 @@ async function checkShareMode() {
       // 2. Render Body
       let bodyHtml = '';
       data.rows.forEach((row, rowIndex) => {
-        const heightStyle = row.height ? `style="height: ${row.height}px;"` : '';
+        const rowHeight = isClip ? (row.height || 38) : 'auto';
+        const heightStyle = `style="height: ${rowHeight}${rowHeight === 'auto' ? '' : 'px'};"`;
         bodyHtml += `<tr ${heightStyle} data-row-id="${row.id}">`;
         bodyHtml += `
           <td style="text-align: center; position: relative; ${sttStyle}">
