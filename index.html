@@ -970,6 +970,18 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.sheet-table th[draggable="true"] {
+  cursor: grab;
+}
+.sheet-table th[draggable="true"]:active {
+  cursor: grabbing;
+}
+.sheet-table th.dragging {
+  opacity: 0.4;
+}
+.sheet-table th.drag-over {
+  border-left: 2px solid var(--accent) !important;
+}
 .sheet-table tr:hover td {
   background: var(--surface2);
 }
@@ -1789,16 +1801,16 @@ function renderSheetTable() {
 
   // 1. Render Header
   let headerHtml = '<tr>';
-  headerHtml += '<th style="width: 50px; text-align: center;">STT</th>';
+  headerHtml += '<th style="width: 50px; min-width: 50px; max-width: 50px; text-align: center;">STT</th>';
   
-  data.columns.forEach(col => {
-    const widthStyle = col.width ? `width: ${col.width}px;` : 'width: 150px;';
+  data.columns.forEach((col, colIndex) => {
+    const widthVal = col.width || 150;
+    const widthStyle = `width: ${widthVal}px; min-width: ${widthVal}px; max-width: ${widthVal}px;`;
     headerHtml += `
-      <th style="${widthStyle}" data-col-id="${col.id}">
+      <th style="${widthStyle}" data-col-id="${col.id}" data-col-idx="${colIndex}" draggable="true">
         <div class="col-header-wrap">
-          <span class="col-header-title" title="${esc(col.name)}">${esc(col.name)}</span>
+          <input class="sheet-col-header-input" value="${esc(col.name)}" data-col-id="${col.id}" placeholder="Tên cột..." />
           <div class="col-header-actions">
-            <button class="col-action-btn edit" title="Đổi tên">✏️</button>
             <button class="col-action-btn del" title="Xóa cột">🗑</button>
           </div>
         </div>
@@ -1808,7 +1820,7 @@ function renderSheetTable() {
   });
   
   headerHtml += `
-    <th style="width: 80px; text-align: center; background: var(--surface); border-right: none;">
+    <th style="width: 80px; min-width: 80px; max-width: 80px; text-align: center; background: var(--surface); border-right: none;">
       <button class="btn-ghost" id="btn-sheet-header-add-col" style="padding: 2px 8px; font-size: 11px;" title="Thêm cột">＋ Cột</button>
     </th>
   `;
@@ -1821,7 +1833,7 @@ function renderSheetTable() {
     const heightStyle = row.height ? `style="height: ${row.height}px;"` : '';
     bodyHtml += `<tr ${heightStyle} data-row-id="${row.id}">`;
     bodyHtml += `
-      <td style="text-align: center; position: relative;">
+      <td style="text-align: center; position: relative; width: 50px; min-width: 50px; max-width: 50px;">
         <span class="row-num-text">${rowIndex + 1}</span>
         <button class="col-action-btn del row-del-btn" style="display: none; position: absolute; inset: 0; margin: auto; background: var(--surface2); width: 100%; height: 100%; align-items: center; justify-content: center;" title="Xóa hàng">🗑</button>
         <div class="row-resize-handle"></div>
@@ -1840,26 +1852,39 @@ function renderSheetTable() {
     bodyHtml += '<td style="background: var(--bg); border-right: none;"></td>';
     bodyHtml += '</tr>';
   });
+
+  // Footer row at the bottom of the table
+  bodyHtml += `
+    <tr class="sheet-add-row-tr" style="height: 38px;">
+      <td style="text-align: center; background: var(--surface2); border-bottom: none; border-right: 1px solid var(--border); position: relative;">
+        <button class="btn-ghost" id="btn-sheet-footer-add-row" style="padding: 2px 8px; font-size: 11px;" title="Thêm hàng">＋ Dòng</button>
+      </td>
+      <td colspan="${data.columns.length + 1}" style="background: var(--bg); border-bottom: none; border-right: none;"></td>
+    </tr>
+  `;
+
   tbody.innerHTML = bodyHtml;
 
   // 3. Attach Event Listeners
   thead.querySelectorAll('th[data-col-id]').forEach(th => {
     const colId = th.dataset.colId;
-    
-    // Rename Column
-    const editBtn = th.querySelector('.col-action-btn.edit');
-    if (editBtn) {
-      editBtn.onclick = (e) => {
-        e.stopPropagation();
-        const col = data.columns.find(c => c.id === colId);
-        if (!col) return;
-        const newName = prompt('Nhập tên mới cho cột:', col.name);
-        if (newName && newName.trim()) {
-          col.name = newName.trim();
-          triggerSaveSheet();
-          renderSheetTable();
-        }
+    const col = data.columns.find(c => c.id === colId);
+    if (!col) return;
+
+    // Inline Rename Column Input
+    const input = th.querySelector('.sheet-col-header-input');
+    if (input) {
+      input.oninput = () => {
+        col.name = input.value;
+        triggerSaveSheet();
       };
+      // Prevent drag event from firing when selecting text in the input
+      input.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+      });
+      input.addEventListener('dragstart', (e) => {
+        e.stopPropagation();
+      });
     }
 
     // Delete Column
@@ -1867,8 +1892,6 @@ function renderSheetTable() {
     if (delBtn) {
       delBtn.onclick = (e) => {
         e.stopPropagation();
-        const col = data.columns.find(c => c.id === colId);
-        if (!col) return;
         if (!confirm(`Xóa cột "${col.name}"? Thao tác này sẽ xóa toàn bộ dữ liệu của cột này.`)) return;
         
         data.columns = data.columns.filter(c => c.id !== colId);
@@ -1881,12 +1904,62 @@ function renderSheetTable() {
       };
     }
 
+    // Drag & Drop Column Reordering
+    th.addEventListener('dragstart', (e) => {
+      dragColId = colId;
+      e.dataTransfer.effectAllowed = 'move';
+      th.classList.add('dragging');
+    });
+
+    th.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    });
+
+    th.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      if (dragColId && dragColId !== colId) {
+        th.classList.add('drag-over');
+      }
+    });
+
+    th.addEventListener('dragleave', () => {
+      th.classList.remove('drag-over');
+    });
+
+    th.addEventListener('dragend', () => {
+      th.classList.remove('dragging');
+      thead.querySelectorAll('th[data-col-id]').forEach(el => el.classList.remove('drag-over'));
+    });
+
+    th.addEventListener('drop', (e) => {
+      e.preventDefault();
+      th.classList.remove('drag-over');
+      if (!dragColId || dragColId === colId) return;
+      
+      const fromIdx = data.columns.findIndex(c => c.id === dragColId);
+      const toIdx = data.columns.findIndex(c => c.id === colId);
+      if (fromIdx !== -1 && toIdx !== -1) {
+        const [movedCol] = data.columns.splice(fromIdx, 1);
+        data.columns.splice(toIdx, 0, movedCol);
+        triggerSaveSheet();
+        renderSheetTable();
+      }
+      dragColId = null;
+    });
+
     makeColumnResizable(th, colId);
   });
 
   const headerAddColBtn = document.getElementById('btn-sheet-header-add-col');
   if (headerAddColBtn) {
     headerAddColBtn.onclick = () => addSheetColumn();
+  }
+
+  // Bind footer add row
+  const footerAddRowBtn = document.getElementById('btn-sheet-footer-add-row');
+  if (footerAddRowBtn) {
+    footerAddRowBtn.onclick = () => addSheetRow();
   }
 
   tbody.querySelectorAll('tr[data-row-id]').forEach(tr => {
@@ -1957,13 +2030,10 @@ function addSheetColumn() {
   if (!current) return;
   initSheetData(current);
   
-  const colName = prompt('Nhập tên cột mới:');
-  if (!colName || !colName.trim()) return;
-  
   const newColId = 'col_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
   const newCol = {
     id: newColId,
-    name: colName.trim(),
+    name: 'Cột mới',
     width: 150
   };
   
@@ -1974,6 +2044,15 @@ function addSheetColumn() {
   
   triggerSaveSheet();
   renderSheetTable();
+
+  // Focus and select the new column title input immediately
+  setTimeout(() => {
+    const input = document.querySelector(`.sheet-col-header-input[data-col-id="${newColId}"]`);
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  }, 50);
 }
 
 function makeColumnResizable(th, colId) {
@@ -1994,6 +2073,8 @@ function makeColumnResizable(th, colId) {
     const onMouseMove = (moveEvent) => {
       const newWidth = Math.max(50, startWidth + (moveEvent.pageX - startX));
       th.style.width = newWidth + 'px';
+      th.style.minWidth = newWidth + 'px';
+      th.style.maxWidth = newWidth + 'px';
     };
     
     const onMouseUp = () => {
@@ -2698,15 +2779,6 @@ async function checkShareMode() {
         <div id="s-kanban-board" class="kanban-board-shared"></div>
       </div>
       <div id="s-sheet-wrap" style="display:none; width:100%;">
-        ${note.share_perm === 'edit'
-          ? `
-          <div class="sheet-actions-bar" style="margin-bottom:12px; display:flex; gap:8px;">
-            <button class="btn-primary" id="btn-s-sheet-add-row" style="padding:6px 12px;font-size:12px">＋ Thêm hàng (Dòng)</button>
-            <button class="btn-secondary" id="btn-s-sheet-add-col" style="padding:6px 12px;font-size:12px">＋ Thêm cột</button>
-          </div>
-          `
-          : ''
-        }
         <div class="sheet-table-container">
           <table class="sheet-table">
             <thead id="s-sheet-thead">
@@ -2806,22 +2878,20 @@ async function checkShareMode() {
 
       // 1. Render Header
       let headerHtml = '<tr>';
-      headerHtml += '<th style="width: 50px; text-align: center;">STT</th>';
+      headerHtml += '<th style="width: 50px; min-width: 50px; max-width: 50px; text-align: center;">STT</th>';
       
-      data.columns.forEach(col => {
-        const widthStyle = col.width ? `width: ${col.width}px;` : 'width: 150px;';
+      data.columns.forEach((col, colIndex) => {
+        const widthVal = col.width || 150;
+        const widthStyle = `width: ${widthVal}px; min-width: ${widthVal}px; max-width: ${widthVal}px;`;
         headerHtml += `
-          <th style="${widthStyle}" data-col-id="${col.id}">
+          <th style="${widthStyle}" data-col-id="${col.id}" data-col-idx="${colIndex}" ${isEdit ? 'draggable="true"' : ''}>
             <div class="col-header-wrap">
-              <span class="col-header-title" title="${esc(col.name)}">${esc(col.name)}</span>
               ${isEdit 
-                ? `
-                <div class="col-header-actions">
-                  <button class="col-action-btn edit" title="Đổi tên">✏️</button>
-                  <button class="col-action-btn del" title="Xóa cột">🗑</button>
-                </div>
-                `
-                : ''
+                ? `<input class="sheet-col-header-input" value="${esc(col.name)}" data-col-id="${col.id}" placeholder="Tên cột..." />
+                   <div class="col-header-actions">
+                     <button class="col-action-btn del" title="Xóa cột">🗑</button>
+                   </div>`
+                : `<span class="col-header-title" title="${esc(col.name)}">${esc(col.name)}</span>`
               }
             </div>
             ${isEdit ? '<div class="col-resize-handle"></div>' : ''}
@@ -2831,7 +2901,7 @@ async function checkShareMode() {
       
       if (isEdit) {
         headerHtml += `
-          <th style="width: 80px; text-align: center; background: var(--surface); border-right: none;">
+          <th style="width: 80px; min-width: 80px; max-width: 80px; text-align: center; background: var(--surface); border-right: none;">
             <button class="btn-ghost" id="btn-s-sheet-header-add-col" style="padding: 2px 8px; font-size: 11px;" title="Thêm cột">＋ Cột</button>
           </th>
         `;
@@ -2845,7 +2915,7 @@ async function checkShareMode() {
         const heightStyle = row.height ? `style="height: ${row.height}px;"` : '';
         bodyHtml += `<tr ${heightStyle} data-row-id="${row.id}">`;
         bodyHtml += `
-          <td style="text-align: center; position: relative;">
+          <td style="text-align: center; position: relative; width: 50px; min-width: 50px; max-width: 50px;">
             <span class="row-num-text">${rowIndex + 1}</span>
             ${isEdit 
               ? `
@@ -2871,34 +2941,49 @@ async function checkShareMode() {
         }
         bodyHtml += '</tr>';
       });
+
+      if (isEdit) {
+        // Footer row at the bottom of the table
+        bodyHtml += `
+          <tr class="sheet-add-row-tr" style="height: 38px;">
+            <td style="text-align: center; background: var(--surface2); border-bottom: none; border-right: 1px solid var(--border); position: relative;">
+              <button class="btn-ghost" id="btn-s-sheet-footer-add-row" style="padding: 2px 8px; font-size: 11px;" title="Thêm hàng">＋ Dòng</button>
+            </td>
+            <td colspan="${data.columns.length + 1}" style="background: var(--bg); border-bottom: none; border-right: none;"></td>
+          </tr>
+        `;
+      }
+
       tbody.innerHTML = bodyHtml;
 
       // 3. Attach Event Listeners
       if (isEdit) {
         thead.querySelectorAll('th[data-col-id]').forEach(th => {
           const colId = th.dataset.colId;
-          
-          const editBtn = th.querySelector('.col-action-btn.edit');
-          if (editBtn) {
-            editBtn.onclick = (e) => {
-              e.stopPropagation();
-              const col = data.columns.find(c => c.id === colId);
-              if (!col) return;
-              const newName = prompt('Nhập tên mới cho cột:', col.name);
-              if (newName && newName.trim()) {
-                col.name = newName.trim();
-                triggerSharedSheetChange();
-                renderSharedSheetTable();
-              }
+          const col = data.columns.find(c => c.id === colId);
+          if (!col) return;
+
+          // Inline Rename Column Input
+          const input = th.querySelector('.sheet-col-header-input');
+          if (input) {
+            input.oninput = () => {
+              col.name = input.value;
+              triggerSharedSheetChange();
             };
+            // Prevent drag event from firing when selecting text in the input
+            input.addEventListener('mousedown', (e) => {
+              e.stopPropagation();
+            });
+            input.addEventListener('dragstart', (e) => {
+              e.stopPropagation();
+            });
           }
 
+          // Delete Column
           const delBtn = th.querySelector('.col-action-btn.del');
           if (delBtn) {
             delBtn.onclick = (e) => {
               e.stopPropagation();
-              const col = data.columns.find(c => c.id === colId);
-              if (!col) return;
               if (!confirm(`Xóa cột "${col.name}"? Thao tác này sẽ xóa toàn bộ dữ liệu của cột này.`)) return;
               
               data.columns = data.columns.filter(c => c.id !== colId);
@@ -2911,12 +2996,62 @@ async function checkShareMode() {
             };
           }
 
+          // Drag & Drop Column Reordering (Shared view, Edit mode)
+          th.addEventListener('dragstart', (e) => {
+            dragColId = colId;
+            e.dataTransfer.effectAllowed = 'move';
+            th.classList.add('dragging');
+          });
+
+          th.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+          });
+
+          th.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            if (dragColId && dragColId !== colId) {
+              th.classList.add('drag-over');
+            }
+          });
+
+          th.addEventListener('dragleave', () => {
+            th.classList.remove('drag-over');
+          });
+
+          th.addEventListener('dragend', () => {
+            th.classList.remove('dragging');
+            thead.querySelectorAll('th[data-col-id]').forEach(el => el.classList.remove('drag-over'));
+          });
+
+          th.addEventListener('drop', (e) => {
+            e.preventDefault();
+            th.classList.remove('drag-over');
+            if (!dragColId || dragColId === colId) return;
+            
+            const fromIdx = data.columns.findIndex(c => c.id === dragColId);
+            const toIdx = data.columns.findIndex(c => c.id === colId);
+            if (fromIdx !== -1 && toIdx !== -1) {
+              const [movedCol] = data.columns.splice(fromIdx, 1);
+              data.columns.splice(toIdx, 0, movedCol);
+              triggerSharedSheetChange();
+              renderSharedSheetTable();
+            }
+            dragColId = null;
+          });
+
           makeSharedColumnResizable(th, colId);
         });
 
         const headerAddColBtn = document.getElementById('btn-s-sheet-header-add-col');
         if (headerAddColBtn) {
           headerAddColBtn.onclick = () => addSharedSheetColumn();
+        }
+
+        // Bind footer add row
+        const footerAddRowBtn = document.getElementById('btn-s-sheet-footer-add-row');
+        if (footerAddRowBtn) {
+          footerAddRowBtn.onclick = () => addSharedSheetRow();
         }
 
         tbody.querySelectorAll('tr[data-row-id]').forEach(tr => {
@@ -2952,15 +3087,6 @@ async function checkShareMode() {
 
           makeSharedRowResizable(tr, rowId);
         });
-        
-        const addRowBtn = document.getElementById('btn-s-sheet-add-row');
-        if (addRowBtn) {
-          addRowBtn.onclick = () => addSharedSheetRow();
-        }
-        const addColBtn = document.getElementById('btn-s-sheet-add-col');
-        if (addColBtn) {
-          addColBtn.onclick = () => addSharedSheetColumn();
-        }
       }
     }
 
@@ -2997,13 +3123,10 @@ async function checkShareMode() {
       if (!note) return;
       initSharedSheetData(note);
       
-      const colName = prompt('Nhập tên cột mới:');
-      if (!colName || !colName.trim()) return;
-      
       const newColId = 'col_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
       const newCol = {
         id: newColId,
-        name: colName.trim(),
+        name: 'Cột mới',
         width: 150
       };
       
@@ -3014,6 +3137,15 @@ async function checkShareMode() {
       
       triggerSharedSheetChange();
       renderSharedSheetTable();
+
+      // Focus and select the new column title input immediately
+      setTimeout(() => {
+        const input = document.querySelector(`.sheet-col-header-input[data-col-id="${newColId}"]`);
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      }, 50);
     }
 
     function makeSharedColumnResizable(th, colId) {
@@ -3034,6 +3166,8 @@ async function checkShareMode() {
         const onMouseMove = (moveEvent) => {
           const newWidth = Math.max(50, startWidth + (moveEvent.pageX - startX));
           th.style.width = newWidth + 'px';
+          th.style.minWidth = newWidth + 'px';
+          th.style.maxWidth = newWidth + 'px';
         };
         
         const onMouseUp = () => {
@@ -3686,9 +3820,7 @@ document.getElementById('btn-new').addEventListener('click', async () => {
   btn.disabled = false;
 });
 
-// SHEET ACTIONS
-document.getElementById('btn-sheet-add-row').addEventListener('click', addSheetRow);
-document.getElementById('btn-sheet-add-col').addEventListener('click', addSheetColumn);
+
 
 // DELETE
 async function deleteNote(n) {
