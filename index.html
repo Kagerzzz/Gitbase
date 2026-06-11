@@ -1011,8 +1011,15 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
   padding: 6px 4px;
   font-family: var(--mono);
   font-size: 13px;
+  line-height: 1.5;
   outline: none;
   border-radius: 4px;
+  resize: none;
+  overflow-y: hidden;
+  box-sizing: border-box;
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 .sheet-input:focus {
   background: var(--surface3);
@@ -1389,7 +1396,14 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
         </div>
 
         <!-- Sheet Workspace -->
-        <div id="sheet-wrap" style="display:none;">
+        <div id="sheet-wrap" style="display:none; flex-direction: column;">
+          <div class="sheet-options-bar" style="display: flex; gap: 12px; margin-bottom: 8px; align-items: center;">
+            <span style="font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 1px;">Hiển thị:</span>
+            <div class="sheet-toggle-group" style="display: inline-flex; background: var(--surface2); padding: 3px; border-radius: 6px; border: 1px solid var(--border);">
+              <button class="sheet-toggle-btn" id="btn-sheet-wrap-text" style="font-size: 12px; padding: 4px 12px; border: none; background: none; border-radius: 4px; color: var(--text-2); cursor: pointer; font-family: var(--mono); transition: all 0.2s;">↩ Xuống dòng</button>
+              <button class="sheet-toggle-btn" id="btn-sheet-clip-text" style="font-size: 12px; padding: 4px 12px; border: none; background: none; border-radius: 4px; color: var(--text-2); cursor: pointer; font-family: var(--mono); transition: all 0.2s;">⇥ Cắt dòng</button>
+            </div>
+          </div>
           <div class="sheet-table-container">
             <table class="sheet-table">
               <thead id="sheet-thead">
@@ -1809,6 +1823,9 @@ function initSheetData(n) {
   if (!n.sheet_data.stt_width) {
     n.sheet_data.stt_width = 50;
   }
+  if (!n.sheet_data.wrap_mode) {
+    n.sheet_data.wrap_mode = 'wrap';
+  }
 }
 
 function renderSheetTable() {
@@ -1820,6 +1837,44 @@ function renderSheetTable() {
   if (!thead || !tbody) return;
 
   const data = current.sheet_data;
+  const isClip = (data.wrap_mode === 'clip');
+
+  // Highlight active toolbar options
+  const btnWrap = document.getElementById('btn-sheet-wrap-text');
+  const btnClip = document.getElementById('btn-sheet-clip-text');
+  if (btnWrap && btnClip) {
+    if (isClip) {
+      btnWrap.style.background = 'transparent';
+      btnWrap.style.color = 'var(--text-2)';
+      btnWrap.style.fontWeight = 'normal';
+      btnWrap.style.boxShadow = 'none';
+
+      btnClip.style.background = 'var(--surface)';
+      btnClip.style.color = 'var(--accent)';
+      btnClip.style.fontWeight = '600';
+      btnClip.style.boxShadow = '0 1px 3px rgba(0,0,0,0.15)';
+    } else {
+      btnWrap.style.background = 'var(--surface)';
+      btnWrap.style.color = 'var(--accent)';
+      btnWrap.style.fontWeight = '600';
+      btnWrap.style.boxShadow = '0 1px 3px rgba(0,0,0,0.15)';
+
+      btnClip.style.background = 'transparent';
+      btnClip.style.color = 'var(--text-2)';
+      btnClip.style.fontWeight = 'normal';
+      btnClip.style.boxShadow = 'none';
+    }
+    btnWrap.onclick = () => {
+      data.wrap_mode = 'wrap';
+      triggerSaveSheet();
+      renderSheetTable();
+    };
+    btnClip.onclick = () => {
+      data.wrap_mode = 'clip';
+      triggerSaveSheet();
+      renderSheetTable();
+    };
+  }
 
   // 1. Render Header
   let headerHtml = '<tr>';
@@ -1873,11 +1928,19 @@ function renderSheetTable() {
 
     data.columns.forEach(col => {
       const cellVal = row.cells[col.id] || '';
-      bodyHtml += `
-        <td>
-          <input class="sheet-input" data-col-id="${col.id}" value="${esc(cellVal)}" placeholder="..." />
-        </td>
-      `;
+      if (isClip) {
+        bodyHtml += `
+          <td>
+            <input class="sheet-input" data-col-id="${col.id}" value="${esc(cellVal)}" placeholder="..." />
+          </td>
+        `;
+      } else {
+        bodyHtml += `
+          <td>
+            <textarea class="sheet-input" data-col-id="${col.id}" placeholder="..." rows="1">${esc(cellVal)}</textarea>
+          </td>
+        `;
+      }
     });
 
     bodyHtml += '<td style="background: var(--bg); border-right: none;"></td>';
@@ -2020,10 +2083,16 @@ function renderSheetTable() {
       };
     }
 
-    tr.querySelectorAll('input.sheet-input').forEach(input => {
+    tr.querySelectorAll('.sheet-input').forEach(input => {
       const colId = input.dataset.colId;
+      if (!isClip) {
+        autoSizeTextarea(input);
+      }
       input.oninput = () => {
         row.cells[colId] = input.value;
+        if (!isClip) {
+          autoSizeTextarea(input);
+        }
         triggerSaveSheet();
       };
     });
@@ -2169,6 +2238,12 @@ function makeSttColumnResizable(th) {
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
   });
+}
+
+function autoSizeTextarea(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
 }
 
 function makeRowResizable(tr, rowId) {
@@ -2853,7 +2928,14 @@ async function checkShareMode() {
       <div id="s-kanban-wrap" style="display:none;">
         <div id="s-kanban-board" class="kanban-board-shared"></div>
       </div>
-      <div id="s-sheet-wrap" style="display:none; width:100%;">
+      <div id="s-sheet-wrap" style="display:none; width:100%; flex-direction: column;">
+        <div class="sheet-options-bar" id="s-sheet-options-bar" style="display: none; gap: 12px; margin-bottom: 8px; align-items: center;">
+          <span style="font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 1px;">Hiển thị:</span>
+          <div class="sheet-toggle-group" style="display: inline-flex; background: var(--surface2); padding: 3px; border-radius: 6px; border: 1px solid var(--border);">
+            <button class="sheet-toggle-btn" id="btn-s-sheet-wrap-text" style="font-size: 12px; padding: 4px 12px; border: none; background: none; border-radius: 4px; color: var(--text-2); cursor: pointer; font-family: var(--mono); transition: all 0.2s;">↩ Xuống dòng</button>
+            <button class="sheet-toggle-btn" id="btn-s-sheet-clip-text" style="font-size: 12px; padding: 4px 12px; border: none; background: none; border-radius: 4px; color: var(--text-2); cursor: pointer; font-family: var(--mono); transition: all 0.2s;">⇥ Cắt dòng</button>
+          </div>
+        </div>
         <div class="sheet-table-container">
           <table class="sheet-table">
             <thead id="s-sheet-thead">
@@ -2942,6 +3024,9 @@ async function checkShareMode() {
       if (!n.sheet_data.stt_width) {
         n.sheet_data.stt_width = 50;
       }
+      if (!n.sheet_data.wrap_mode) {
+        n.sheet_data.wrap_mode = 'wrap';
+      }
     }
 
     function renderSharedSheetTable() {
@@ -2954,6 +3039,50 @@ async function checkShareMode() {
 
       const data = note.sheet_data;
       const isEdit = note.share_perm === 'edit';
+      const isClip = (data.wrap_mode === 'clip');
+
+      // Highlight active toolbar options in Shared view
+      const bar = document.getElementById('s-sheet-options-bar');
+      if (bar) {
+        bar.style.display = isEdit ? 'flex' : 'none';
+      }
+      const btnWrap = document.getElementById('btn-s-sheet-wrap-text');
+      const btnClip = document.getElementById('btn-s-sheet-clip-text');
+      if (btnWrap && btnClip) {
+        if (isClip) {
+          btnWrap.style.background = 'transparent';
+          btnWrap.style.color = 'var(--text-2)';
+          btnWrap.style.fontWeight = 'normal';
+          btnWrap.style.boxShadow = 'none';
+
+          btnClip.style.background = 'var(--surface)';
+          btnClip.style.color = 'var(--accent)';
+          btnClip.style.fontWeight = '600';
+          btnClip.style.boxShadow = '0 1px 3px rgba(0,0,0,0.15)';
+        } else {
+          btnWrap.style.background = 'var(--surface)';
+          btnWrap.style.color = 'var(--accent)';
+          btnWrap.style.fontWeight = '600';
+          btnWrap.style.boxShadow = '0 1px 3px rgba(0,0,0,0.15)';
+
+          btnClip.style.background = 'transparent';
+          btnClip.style.color = 'var(--text-2)';
+          btnClip.style.fontWeight = 'normal';
+          btnClip.style.boxShadow = 'none';
+        }
+        if (isEdit) {
+          btnWrap.onclick = () => {
+            data.wrap_mode = 'wrap';
+            triggerSharedSheetChange();
+            renderSharedSheetTable();
+          };
+          btnClip.onclick = () => {
+            data.wrap_mode = 'clip';
+            triggerSharedSheetChange();
+            renderSharedSheetTable();
+          };
+        }
+      }
 
       // 1. Render Header
       let headerHtml = '<tr>';
@@ -3017,11 +3146,19 @@ async function checkShareMode() {
 
         data.columns.forEach(col => {
           const cellVal = row.cells[col.id] || '';
-          bodyHtml += `
-            <td>
-              <input class="sheet-input" data-col-id="${col.id}" value="${esc(cellVal)}" placeholder="..." ${!isEdit ? 'disabled' : ''} />
-            </td>
-          `;
+          if (isClip) {
+            bodyHtml += `
+              <td>
+                <input class="sheet-input" data-col-id="${col.id}" value="${esc(cellVal)}" placeholder="..." ${!isEdit ? 'disabled' : ''} />
+              </td>
+            `;
+          } else {
+            bodyHtml += `
+              <td>
+                <textarea class="sheet-input" data-col-id="${col.id}" placeholder="..." rows="1" ${!isEdit ? 'disabled' : ''}>${esc(cellVal)}</textarea>
+              </td>
+            `;
+          }
         });
 
         if (isEdit) {
@@ -3169,16 +3306,29 @@ async function checkShareMode() {
             };
           }
 
-          tr.querySelectorAll('input.sheet-input').forEach(input => {
+          tr.querySelectorAll('.sheet-input').forEach(input => {
             const colId = input.dataset.colId;
+            if (!isClip) {
+              autoSizeTextarea(input);
+            }
             input.oninput = () => {
               row.cells[colId] = input.value;
+              if (!isClip) {
+                autoSizeTextarea(input);
+              }
               triggerSharedSheetChange();
             };
           });
 
           makeSharedRowResizable(tr, rowId);
         });
+      } else {
+        // Read-only mode: auto-size textareas if not in clip mode
+        if (!isClip) {
+          tbody.querySelectorAll('.sheet-input').forEach(input => {
+            autoSizeTextarea(input);
+          });
+        }
       }
     }
 
