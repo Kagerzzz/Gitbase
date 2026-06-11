@@ -933,11 +933,28 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
 }
 .sheet-table {
   width: max-content;
-  min-width: 100%;
   border-collapse: collapse;
   font-size: 13px;
   color: var(--text);
   table-layout: fixed;
+}
+.sheet-btn-transparent {
+  background: none;
+  border: none !important;
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all .15s;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sheet-btn-transparent:hover {
+  color: var(--text);
+  background: var(--surface2);
+  border-radius: 4px;
 }
 .sheet-col-header-input {
   background: transparent;
@@ -1769,6 +1786,7 @@ function triggerSaveSheet() {
 function initSheetData(n) {
   if (!n.sheet_data || typeof n.sheet_data !== 'object' || !Array.isArray(n.sheet_data.columns) || !Array.isArray(n.sheet_data.rows)) {
     n.sheet_data = {
+      stt_width: 50,
       columns: [
         { id: 'col_' + Date.now() + '_1', name: 'Nội dung công việc', width: 250 },
         { id: 'col_' + Date.now() + '_2', name: 'Người thực hiện', width: 150 },
@@ -1787,6 +1805,9 @@ function initSheetData(n) {
       n.sheet_data.rows[0].cells[col.id] = '';
     });
   }
+  if (!n.sheet_data.stt_width) {
+    n.sheet_data.stt_width = 50;
+  }
 }
 
 function renderSheetTable() {
@@ -1801,7 +1822,16 @@ function renderSheetTable() {
 
   // 1. Render Header
   let headerHtml = '<tr>';
-  headerHtml += '<th style="width: 50px; min-width: 50px; max-width: 50px; text-align: center;">STT</th>';
+  const sttWidth = data.stt_width || 50;
+  const sttStyle = `width: ${sttWidth}px; min-width: ${sttWidth}px; max-width: ${sttWidth}px;`;
+  headerHtml += `
+    <th style="${sttStyle} text-align: center;" class="stt-header">
+      <div class="col-header-wrap" style="justify-content: center; width: 100%;">
+        <span>STT</span>
+      </div>
+      <div class="col-resize-handle"></div>
+    </th>
+  `;
   
   data.columns.forEach((col, colIndex) => {
     const widthVal = col.width || 150;
@@ -1820,8 +1850,8 @@ function renderSheetTable() {
   });
   
   headerHtml += `
-    <th style="width: 80px; min-width: 80px; max-width: 80px; text-align: center; background: var(--surface); border-right: none;">
-      <button class="btn-ghost" id="btn-sheet-header-add-col" style="padding: 2px 8px; font-size: 11px;" title="Thêm cột">＋ Cột</button>
+    <th style="width: 110px; min-width: 110px; max-width: 110px; text-align: center; background: var(--surface); border-right: none;">
+      <button class="sheet-btn-transparent" id="btn-sheet-header-add-col" style="margin: auto;" title="Thêm cột">＋ Thêm cột</button>
     </th>
   `;
   headerHtml += '</tr>';
@@ -1833,7 +1863,7 @@ function renderSheetTable() {
     const heightStyle = row.height ? `style="height: ${row.height}px;"` : '';
     bodyHtml += `<tr ${heightStyle} data-row-id="${row.id}">`;
     bodyHtml += `
-      <td style="text-align: center; position: relative; width: 50px; min-width: 50px; max-width: 50px;">
+      <td style="text-align: center; position: relative; ${sttStyle}">
         <span class="row-num-text">${rowIndex + 1}</span>
         <button class="col-action-btn del row-del-btn" style="display: none; position: absolute; inset: 0; margin: auto; background: var(--surface2); width: 100%; height: 100%; align-items: center; justify-content: center;" title="Xóa hàng">🗑</button>
         <div class="row-resize-handle"></div>
@@ -1856,16 +1886,20 @@ function renderSheetTable() {
   // Footer row at the bottom of the table
   bodyHtml += `
     <tr class="sheet-add-row-tr" style="height: 38px;">
-      <td style="text-align: center; background: var(--surface2); border-bottom: none; border-right: 1px solid var(--border); position: relative;">
-        <button class="btn-ghost" id="btn-sheet-footer-add-row" style="padding: 2px 8px; font-size: 11px;" title="Thêm hàng">＋ Dòng</button>
+      <td colspan="${data.columns.length + 2}" style="background: var(--surface2); border-bottom: none; border-right: none; padding: 4px 12px; align-content: center;">
+        <button class="sheet-btn-transparent" id="btn-sheet-footer-add-row" title="Thêm hàng">＋ Thêm dòng</button>
       </td>
-      <td colspan="${data.columns.length + 1}" style="background: var(--bg); border-bottom: none; border-right: none;"></td>
     </tr>
   `;
 
   tbody.innerHTML = bodyHtml;
 
   // 3. Attach Event Listeners
+  const sttTh = thead.querySelector('th.stt-header');
+  if (sttTh) {
+    makeSttColumnResizable(sttTh);
+  }
+
   thead.querySelectorAll('th[data-col-id]').forEach(th => {
     const colId = th.dataset.colId;
     const col = data.columns.find(c => c.id === colId);
@@ -2087,6 +2121,46 @@ function makeColumnResizable(th, colId) {
       const col = current.sheet_data.columns.find(c => c.id === colId);
       if (col) {
         col.width = th.offsetWidth;
+        triggerSaveSheet();
+      }
+    };
+    
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  });
+}
+
+function makeSttColumnResizable(th) {
+  const handle = th.querySelector('.col-resize-handle');
+  if (!handle) return;
+  
+  let startX, startWidth;
+  
+  handle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    startX = e.pageX;
+    startWidth = th.offsetWidth;
+    handle.classList.add('resizing');
+    
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    
+    const onMouseMove = (moveEvent) => {
+      const newWidth = Math.max(30, startWidth + (moveEvent.pageX - startX));
+      th.style.width = newWidth + 'px';
+      th.style.minWidth = newWidth + 'px';
+      th.style.maxWidth = newWidth + 'px';
+    };
+    
+    const onMouseUp = () => {
+      handle.classList.remove('resizing');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      
+      if (current && current.sheet_data) {
+        current.sheet_data.stt_width = th.offsetWidth;
         triggerSaveSheet();
       }
     };
@@ -2849,6 +2923,7 @@ async function checkShareMode() {
     function initSharedSheetData(n) {
       if (!n.sheet_data || typeof n.sheet_data !== 'object' || !Array.isArray(n.sheet_data.columns) || !Array.isArray(n.sheet_data.rows)) {
         n.sheet_data = {
+          stt_width: 50,
           columns: [
             { id: 'col_1', name: 'Nội dung công việc', width: 250 },
             { id: 'col_2', name: 'Người thực hiện', width: 150 },
@@ -2862,6 +2937,9 @@ async function checkShareMode() {
         n.sheet_data.columns.forEach(col => {
           n.sheet_data.rows[0].cells[col.id] = '';
         });
+      }
+      if (!n.sheet_data.stt_width) {
+        n.sheet_data.stt_width = 50;
       }
     }
 
@@ -2878,7 +2956,16 @@ async function checkShareMode() {
 
       // 1. Render Header
       let headerHtml = '<tr>';
-      headerHtml += '<th style="width: 50px; min-width: 50px; max-width: 50px; text-align: center;">STT</th>';
+      const sttWidth = data.stt_width || 50;
+      const sttStyle = `width: ${sttWidth}px; min-width: ${sttWidth}px; max-width: ${sttWidth}px;`;
+      headerHtml += `
+        <th style="${sttStyle} text-align: center;" class="stt-header">
+          <div class="col-header-wrap" style="justify-content: center; width: 100%;">
+            <span>STT</span>
+          </div>
+          ${isEdit ? '<div class="col-resize-handle"></div>' : ''}
+        </th>
+      `;
       
       data.columns.forEach((col, colIndex) => {
         const widthVal = col.width || 150;
@@ -2901,8 +2988,8 @@ async function checkShareMode() {
       
       if (isEdit) {
         headerHtml += `
-          <th style="width: 80px; min-width: 80px; max-width: 80px; text-align: center; background: var(--surface); border-right: none;">
-            <button class="btn-ghost" id="btn-s-sheet-header-add-col" style="padding: 2px 8px; font-size: 11px;" title="Thêm cột">＋ Cột</button>
+          <th style="width: 110px; min-width: 110px; max-width: 110px; text-align: center; background: var(--surface); border-right: none;">
+            <button class="sheet-btn-transparent" id="btn-s-sheet-header-add-col" style="margin: auto;" title="Thêm cột">＋ Thêm cột</button>
           </th>
         `;
       }
@@ -2915,7 +3002,7 @@ async function checkShareMode() {
         const heightStyle = row.height ? `style="height: ${row.height}px;"` : '';
         bodyHtml += `<tr ${heightStyle} data-row-id="${row.id}">`;
         bodyHtml += `
-          <td style="text-align: center; position: relative; width: 50px; min-width: 50px; max-width: 50px;">
+          <td style="text-align: center; position: relative; ${sttStyle}">
             <span class="row-num-text">${rowIndex + 1}</span>
             ${isEdit 
               ? `
@@ -2946,10 +3033,9 @@ async function checkShareMode() {
         // Footer row at the bottom of the table
         bodyHtml += `
           <tr class="sheet-add-row-tr" style="height: 38px;">
-            <td style="text-align: center; background: var(--surface2); border-bottom: none; border-right: 1px solid var(--border); position: relative;">
-              <button class="btn-ghost" id="btn-s-sheet-footer-add-row" style="padding: 2px 8px; font-size: 11px;" title="Thêm hàng">＋ Dòng</button>
+            <td colspan="${data.columns.length + 2}" style="background: var(--surface2); border-bottom: none; border-right: none; padding: 4px 12px; align-content: center;">
+              <button class="sheet-btn-transparent" id="btn-s-sheet-footer-add-row" title="Thêm hàng">＋ Thêm dòng</button>
             </td>
-            <td colspan="${data.columns.length + 1}" style="background: var(--bg); border-bottom: none; border-right: none;"></td>
           </tr>
         `;
       }
@@ -2958,6 +3044,11 @@ async function checkShareMode() {
 
       // 3. Attach Event Listeners
       if (isEdit) {
+        const sttTh = thead.querySelector('th.stt-header');
+        if (sttTh) {
+          makeSharedSttColumnResizable(sttTh);
+        }
+
         thead.querySelectorAll('th[data-col-id]').forEach(th => {
           const colId = th.dataset.colId;
           const col = data.columns.find(c => c.id === colId);
@@ -3180,6 +3271,46 @@ async function checkShareMode() {
           const col = note.sheet_data.columns.find(c => c.id === colId);
           if (col) {
             col.width = th.offsetWidth;
+            triggerSharedSheetChange();
+          }
+        };
+        
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+      });
+    }
+
+    function makeSharedSttColumnResizable(th) {
+      const handle = th.querySelector('.col-resize-handle');
+      if (!handle) return;
+      
+      let startX, startWidth;
+      
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        startX = e.pageX;
+        startWidth = th.offsetWidth;
+        handle.classList.add('resizing');
+        
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        
+        const onMouseMove = (moveEvent) => {
+          const newWidth = Math.max(30, startWidth + (moveEvent.pageX - startX));
+          th.style.width = newWidth + 'px';
+          th.style.minWidth = newWidth + 'px';
+          th.style.maxWidth = newWidth + 'px';
+        };
+        
+        const onMouseUp = () => {
+          handle.classList.remove('resizing');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          window.removeEventListener('mousemove', onMouseMove);
+          window.removeEventListener('mouseup', onMouseUp);
+          
+          if (note && note.sheet_data) {
+            note.sheet_data.stt_width = th.offsetWidth;
             triggerSharedSheetChange();
           }
         };
