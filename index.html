@@ -890,14 +890,180 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
   background: #f87171;
 }
 
-/* ===== CONDITIONAL VISIBILITY IN KANBAN MODE ===== */
+/* ===== CONDITIONAL VISIBILITY IN KANBAN & SHEET MODES ===== */
 #editor-panel.kanban-active #editor-tools,
 #editor-panel.kanban-active #tb-sep-first,
-#editor-panel.kanban-active #editor-wrap {
+#editor-panel.kanban-active #editor-wrap,
+#editor-panel.kanban-active #sheet-wrap,
+#editor-panel.sheet-active #editor-tools,
+#editor-panel.sheet-active #tb-sep-first,
+#editor-panel.sheet-active #editor-wrap,
+#editor-panel.sheet-active #kanban-wrap {
   display: none !important;
 }
 #editor-panel.kanban-active #kanban-wrap {
   display: block !important;
+}
+#editor-panel.sheet-active #sheet-wrap {
+  display: flex !important;
+}
+
+/* ===== SHEET / TABLE VIEW ===== */
+#sheet-wrap {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  padding: 16px;
+  overflow: hidden;
+  height: calc(100vh - 120px);
+}
+.sheet-actions-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+.sheet-table-container {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  position: relative;
+}
+.sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  color: var(--text);
+  table-layout: fixed;
+}
+.sheet-table th, .sheet-table td {
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  padding: 6px 8px;
+  position: relative;
+}
+.sheet-table th {
+  background: var(--surface2);
+  color: var(--text-2);
+  font-weight: 500;
+  text-align: left;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sheet-table tr:hover td {
+  background: var(--surface2);
+}
+.sheet-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 6px 4px;
+  font-family: var(--mono);
+  font-size: 13px;
+  outline: none;
+  border-radius: 4px;
+}
+.sheet-input:focus {
+  background: var(--surface3);
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+.sheet-select {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 4px;
+  font-family: var(--mono);
+  font-size: 13px;
+  outline: none;
+}
+.sheet-select option {
+  background: var(--surface2);
+  color: var(--text);
+}
+.sheet-thumbs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+  cursor: pointer;
+}
+.sheet-thumb {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+.col-header-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-right: 8px;
+}
+.col-header-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.col-header-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.sheet-table th:hover .col-header-actions {
+  opacity: 1;
+}
+.col-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 11px;
+}
+.col-action-btn:hover {
+  color: var(--accent);
+}
+.col-action-btn.del:hover {
+  color: var(--red);
+}
+
+/* Resize Handles */
+.col-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  transition: background 0.15s;
+}
+.col-resize-handle:hover, .col-resize-handle.resizing {
+  background: var(--accent);
+}
+.row-resize-handle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  cursor: row-resize;
+  z-index: 10;
+  background: transparent;
+  transition: background 0.15s;
+}
+.row-resize-handle:hover, .row-resize-handle.resizing {
+  background: var(--accent);
 }
 
 /* ===== SHARED KANBAN BOARD ===== */
@@ -913,12 +1079,20 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
   overflow-x: auto;
   overflow-y: hidden;
 }
+#s-sheet-wrap {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  width: 100%;
+  margin-top: 10px;
+}
 #s-note-wrap {
   flex: 1;
   overflow-y: auto;
   padding-bottom: 20px;
 }
-.share-body.kanban-active {
+.share-body.kanban-active, .share-body.sheet-active {
   max-width: 100%;
   padding: 20px;
 }
@@ -1096,6 +1270,10 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
               <span>📋 Bảng (Kanban)</span>
               <span class="tab-default-pin" title="Đặt làm mặc định" data-pin="kanban">✓</span>
             </button>
+            <button class="switch-tab" data-view="sheet" id="tab-sheet">
+              <span>📊 Bảng tính (Sheet)</span>
+              <span class="tab-default-pin" title="Đặt làm mặc định" data-pin="sheet">✓</span>
+            </button>
           </div>
         </div>
 
@@ -1162,6 +1340,24 @@ body { background: var(--bg); color: var(--text); font-family: var(--mono); font
         <!-- Kanban Workspace -->
         <div id="kanban-wrap" style="display:none;">
           <div id="kanban-board"></div>
+        </div>
+
+        <!-- Sheet Workspace -->
+        <div id="sheet-wrap" style="display:none;">
+          <div class="sheet-actions-bar">
+            <button class="btn-primary" id="btn-sheet-add-row" style="padding: 8px 14px; font-size: 13px;">＋ Thêm hàng (Dòng)</button>
+            <button class="btn-secondary" id="btn-sheet-add-col" style="padding: 8px 14px; font-size: 13px;">＋ Thêm cột</button>
+          </div>
+          <div class="sheet-table-container">
+            <table class="sheet-table">
+              <thead id="sheet-thead">
+                <!-- Rendered dynamically -->
+              </thead>
+              <tbody id="sheet-tbody">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -1465,16 +1661,19 @@ function switchView(view) {
   const panel = document.getElementById('editor-panel');
   const tabNote = document.getElementById('tab-note');
   const tabKanban = document.getElementById('tab-kanban');
+  const tabSheet = document.getElementById('tab-sheet');
+
+  panel.classList.toggle('kanban-active', view === 'kanban');
+  panel.classList.toggle('sheet-active', view === 'sheet');
+
+  tabNote.classList.toggle('active', view === 'note');
+  tabKanban.classList.toggle('active', view === 'kanban');
+  if (tabSheet) tabSheet.classList.toggle('active', view === 'sheet');
 
   if (view === 'kanban') {
-    panel.classList.add('kanban-active');
-    tabNote.classList.remove('active');
-    tabKanban.classList.add('active');
     renderKanbanBoard();
-  } else {
-    panel.classList.remove('kanban-active');
-    tabNote.classList.add('active');
-    tabKanban.classList.remove('active');
+  } else if (view === 'sheet') {
+    renderSheetTable();
   }
 }
 
@@ -1514,6 +1713,334 @@ document.querySelectorAll('.tab-default-pin').forEach(pin => {
     }
   });
 });
+
+// ===== SHEET / TABLE VIEW LOGIC =====
+let sheetSaveTimer = null;
+function triggerSaveSheet() {
+  if (!current || isOpeningNote) return;
+  const el = document.getElementById('save-ind');
+  if (el) {
+    el.className = 'save-indicator saving';
+    el.textContent = 'Đang lưu tự động...';
+  }
+  
+  clearTimeout(sheetSaveTimer);
+  sheetSaveTimer = setTimeout(async () => {
+    if (!current) return;
+    try {
+      await api({
+        action: 'updateNote',
+        id: current.id,
+        sheet_data: current.sheet_data
+      });
+      const idx = notes.findIndex(x => x.id === current.id);
+      if (idx !== -1) notes[idx].sheet_data = current.sheet_data;
+      setLastSaved();
+    } catch(e) {
+      setSaveError();
+    }
+  }, 1000);
+}
+
+function initSheetData(n) {
+  if (!n.sheet_data || typeof n.sheet_data !== 'object' || !Array.isArray(n.sheet_data.columns) || !Array.isArray(n.sheet_data.rows)) {
+    n.sheet_data = {
+      columns: [
+        { id: 'col_' + Date.now() + '_1', name: 'Nội dung công việc', width: 250 },
+        { id: 'col_' + Date.now() + '_2', name: 'Người thực hiện', width: 150 },
+        { id: 'col_' + Date.now() + '_3', name: 'Thời hạn', width: 120 },
+        { id: 'col_' + Date.now() + '_4', name: 'Ghi chú', width: 200 }
+      ],
+      rows: [
+        { 
+          id: 'row_' + Date.now() + '_1', 
+          height: 38,
+          cells: {} 
+        }
+      ]
+    };
+    n.sheet_data.columns.forEach(col => {
+      n.sheet_data.rows[0].cells[col.id] = '';
+    });
+  }
+}
+
+function renderSheetTable() {
+  if (!current) return;
+  initSheetData(current);
+
+  const thead = document.getElementById('sheet-thead');
+  const tbody = document.getElementById('sheet-tbody');
+  if (!thead || !tbody) return;
+
+  const data = current.sheet_data;
+
+  // 1. Render Header
+  let headerHtml = '<tr>';
+  headerHtml += '<th style="width: 50px; text-align: center;">STT</th>';
+  
+  data.columns.forEach(col => {
+    const widthStyle = col.width ? `width: ${col.width}px;` : 'width: 150px;';
+    headerHtml += `
+      <th style="${widthStyle}" data-col-id="${col.id}">
+        <div class="col-header-wrap">
+          <span class="col-header-title" title="${esc(col.name)}">${esc(col.name)}</span>
+          <div class="col-header-actions">
+            <button class="col-action-btn edit" title="Đổi tên">✏️</button>
+            <button class="col-action-btn del" title="Xóa cột">🗑</button>
+          </div>
+        </div>
+        <div class="col-resize-handle"></div>
+      </th>
+    `;
+  });
+  
+  headerHtml += `
+    <th style="width: 80px; text-align: center; background: var(--surface); border-right: none;">
+      <button class="btn-ghost" id="btn-sheet-header-add-col" style="padding: 2px 8px; font-size: 11px;" title="Thêm cột">＋ Cột</button>
+    </th>
+  `;
+  headerHtml += '</tr>';
+  thead.innerHTML = headerHtml;
+
+  // 2. Render Body
+  let bodyHtml = '';
+  data.rows.forEach((row, rowIndex) => {
+    const heightStyle = row.height ? `style="height: ${row.height}px;"` : '';
+    bodyHtml += `<tr ${heightStyle} data-row-id="${row.id}">`;
+    bodyHtml += `
+      <td style="text-align: center; position: relative;">
+        <span class="row-num-text">${rowIndex + 1}</span>
+        <button class="col-action-btn del row-del-btn" style="display: none; position: absolute; inset: 0; margin: auto; background: var(--surface2); width: 100%; height: 100%; align-items: center; justify-content: center;" title="Xóa hàng">🗑</button>
+        <div class="row-resize-handle"></div>
+      </td>
+    `;
+
+    data.columns.forEach(col => {
+      const cellVal = row.cells[col.id] || '';
+      bodyHtml += `
+        <td>
+          <input class="sheet-input" data-col-id="${col.id}" value="${esc(cellVal)}" placeholder="..." />
+        </td>
+      `;
+    });
+
+    bodyHtml += '<td style="background: var(--bg); border-right: none;"></td>';
+    bodyHtml += '</tr>';
+  });
+  tbody.innerHTML = bodyHtml;
+
+  // 3. Attach Event Listeners
+  thead.querySelectorAll('th[data-col-id]').forEach(th => {
+    const colId = th.dataset.colId;
+    
+    // Rename Column
+    const editBtn = th.querySelector('.col-action-btn.edit');
+    if (editBtn) {
+      editBtn.onclick = (e) => {
+        e.stopPropagation();
+        const col = data.columns.find(c => c.id === colId);
+        if (!col) return;
+        const newName = prompt('Nhập tên mới cho cột:', col.name);
+        if (newName && newName.trim()) {
+          col.name = newName.trim();
+          triggerSaveSheet();
+          renderSheetTable();
+        }
+      };
+    }
+
+    // Delete Column
+    const delBtn = th.querySelector('.col-action-btn.del');
+    if (delBtn) {
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        const col = data.columns.find(c => c.id === colId);
+        if (!col) return;
+        if (!confirm(`Xóa cột "${col.name}"? Thao tác này sẽ xóa toàn bộ dữ liệu của cột này.`)) return;
+        
+        data.columns = data.columns.filter(c => c.id !== colId);
+        data.rows.forEach(r => {
+          delete r.cells[colId];
+        });
+        
+        triggerSaveSheet();
+        renderSheetTable();
+      };
+    }
+
+    makeColumnResizable(th, colId);
+  });
+
+  const headerAddColBtn = document.getElementById('btn-sheet-header-add-col');
+  if (headerAddColBtn) {
+    headerAddColBtn.onclick = () => addSheetColumn();
+  }
+
+  tbody.querySelectorAll('tr[data-row-id]').forEach(tr => {
+    const rowId = tr.dataset.rowId;
+    const row = data.rows.find(r => r.id === rowId);
+    if (!row) return;
+
+    const sttTd = tr.firstElementChild;
+    const rowNumSpan = sttTd.querySelector('.row-num-text');
+    const rowDelBtn = sttTd.querySelector('.row-del-btn');
+    
+    if (sttTd && rowDelBtn && rowNumSpan) {
+      sttTd.onmouseenter = () => {
+        rowNumSpan.style.display = 'none';
+        rowDelBtn.style.display = 'flex';
+      };
+      sttTd.onmouseleave = () => {
+        rowNumSpan.style.display = 'inline';
+        rowDelBtn.style.display = 'none';
+      };
+      rowDelBtn.onclick = () => {
+        deleteSheetRow(rowId);
+      };
+    }
+
+    tr.querySelectorAll('input.sheet-input').forEach(input => {
+      const colId = input.dataset.colId;
+      input.oninput = () => {
+        row.cells[colId] = input.value;
+        triggerSaveSheet();
+      };
+    });
+
+    makeRowResizable(tr, rowId);
+  });
+}
+
+function addSheetRow() {
+  if (!current) return;
+  initSheetData(current);
+  
+  const newRowId = 'row_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  const newRow = {
+    id: newRowId,
+    height: 38,
+    cells: {}
+  };
+  
+  current.sheet_data.columns.forEach(col => {
+    newRow.cells[col.id] = '';
+  });
+  
+  current.sheet_data.rows.push(newRow);
+  triggerSaveSheet();
+  renderSheetTable();
+}
+
+function deleteSheetRow(rowId) {
+  if (!current) return;
+  if (!confirm('Bạn có chắc chắn muốn xóa hàng này?')) return;
+  
+  current.sheet_data.rows = current.sheet_data.rows.filter(r => r.id !== rowId);
+  triggerSaveSheet();
+  renderSheetTable();
+}
+
+function addSheetColumn() {
+  if (!current) return;
+  initSheetData(current);
+  
+  const colName = prompt('Nhập tên cột mới:');
+  if (!colName || !colName.trim()) return;
+  
+  const newColId = 'col_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  const newCol = {
+    id: newColId,
+    name: colName.trim(),
+    width: 150
+  };
+  
+  current.sheet_data.columns.push(newCol);
+  current.sheet_data.rows.forEach(row => {
+    row.cells[newColId] = '';
+  });
+  
+  triggerSaveSheet();
+  renderSheetTable();
+}
+
+function makeColumnResizable(th, colId) {
+  const handle = th.querySelector('.col-resize-handle');
+  if (!handle) return;
+  
+  let startX, startWidth;
+  
+  handle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    startX = e.pageX;
+    startWidth = th.offsetWidth;
+    handle.classList.add('resizing');
+    
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    
+    const onMouseMove = (moveEvent) => {
+      const newWidth = Math.max(50, startWidth + (moveEvent.pageX - startX));
+      th.style.width = newWidth + 'px';
+    };
+    
+    const onMouseUp = () => {
+      handle.classList.remove('resizing');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      
+      const col = current.sheet_data.columns.find(c => c.id === colId);
+      if (col) {
+        col.width = th.offsetWidth;
+        triggerSaveSheet();
+      }
+    };
+    
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  });
+}
+
+function makeRowResizable(tr, rowId) {
+  const handle = tr.querySelector('.row-resize-handle');
+  if (!handle) return;
+  
+  let startY, startHeight;
+  
+  handle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    startY = e.pageY;
+    startHeight = tr.offsetHeight;
+    handle.classList.add('resizing');
+    
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+    
+    const onMouseMove = (moveEvent) => {
+      const newHeight = Math.max(30, startHeight + (moveEvent.pageY - startY));
+      tr.style.height = newHeight + 'px';
+    };
+    
+    const onMouseUp = () => {
+      handle.classList.remove('resizing');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      
+      const row = current.sheet_data.rows.find(r => r.id === rowId);
+      if (row) {
+        row.height = tr.offsetHeight;
+        triggerSaveSheet();
+      }
+    };
+    
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  });
+}
 
 // Helper to get active note kanban data
 function getActiveKanbanData() {
@@ -2145,6 +2672,7 @@ async function checkShareMode() {
           <div class="switcher-tabs">
             <button class="switch-tab active" data-sview="note" id="s-tab-note" style="height: 30px;">📝 Ghi chú</button>
             <button class="switch-tab" data-sview="kanban" id="s-tab-kanban" style="height: 30px;">📋 Bảng (Kanban)</button>
+            <button class="switch-tab" data-sview="sheet" id="s-tab-sheet" style="height: 30px;">📊 Bảng tính</button>
           </div>
         </div>
       </div>
@@ -2156,6 +2684,27 @@ async function checkShareMode() {
       </div>
       <div id="s-kanban-wrap" style="display:none;">
         <div id="s-kanban-board" class="kanban-board-shared"></div>
+      </div>
+      <div id="s-sheet-wrap" style="display:none; width:100%;">
+        ${note.share_perm === 'edit'
+          ? `
+          <div class="sheet-actions-bar" style="margin-bottom:12px; display:flex; gap:8px;">
+            <button class="btn-primary" id="btn-s-sheet-add-row" style="padding:6px 12px;font-size:12px">＋ Thêm hàng (Dòng)</button>
+            <button class="btn-secondary" id="btn-s-sheet-add-col" style="padding:6px 12px;font-size:12px">＋ Thêm cột</button>
+          </div>
+          `
+          : ''
+        }
+        <div class="sheet-table-container">
+          <table class="sheet-table">
+            <thead id="s-sheet-thead">
+              <!-- Rendered dynamically -->
+            </thead>
+            <tbody id="s-sheet-tbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
       </div>
     `;
 
@@ -2172,28 +2721,366 @@ async function checkShareMode() {
       activeSView = view;
       const sTabNote = document.getElementById('s-tab-note');
       const sTabKanban = document.getElementById('s-tab-kanban');
+      const sTabSheet = document.getElementById('s-tab-sheet');
       const sNoteWrap = document.getElementById('s-note-wrap');
       const sKanbanWrap = document.getElementById('s-kanban-wrap');
+      const sSheetWrap = document.getElementById('s-sheet-wrap');
       const shareBody = document.getElementById('share-body');
       
-      if (view === 'kanban') {
-        sTabNote.classList.remove('active');
-        sTabKanban.classList.add('active');
-        sNoteWrap.style.display = 'none';
-        sKanbanWrap.style.display = 'block';
-        shareBody.classList.add('kanban-active');
-        renderSharedKanbanBoard();
-      } else {
-        sTabNote.classList.add('active');
-        sTabKanban.classList.remove('active');
+      sNoteWrap.style.display = 'none';
+      sKanbanWrap.style.display = 'none';
+      sSheetWrap.style.display = 'none';
+
+      sTabNote.classList.toggle('active', view === 'note');
+      sTabKanban.classList.toggle('active', view === 'kanban');
+      sTabSheet.classList.toggle('active', view === 'sheet');
+
+      shareBody.classList.toggle('kanban-active', view === 'kanban');
+      shareBody.classList.toggle('sheet-active', view === 'sheet');
+
+      if (view === 'note') {
         sNoteWrap.style.display = 'block';
-        sKanbanWrap.style.display = 'none';
-        shareBody.classList.remove('kanban-active');
+      } else if (view === 'kanban') {
+        sKanbanWrap.style.display = 'block';
+        renderSharedKanbanBoard();
+      } else if (view === 'sheet') {
+        sSheetWrap.style.display = 'block';
+        renderSharedSheetTable();
       }
     }
 
     document.getElementById('s-tab-note').onclick = () => switchSharedView('note');
     document.getElementById('s-tab-kanban').onclick = () => switchSharedView('kanban');
+    document.getElementById('s-tab-sheet').onclick = () => switchSharedView('sheet');
+
+    // ===== SHARED SHEET / TABLE VIEW LOGIC =====
+    function triggerSharedSheetChange() {
+      const sSave = document.getElementById('s-save');
+      if (sSave) {
+        sSave.disabled = false;
+        sSave.textContent = '💾 Lưu thay đổi';
+      }
+    }
+
+    function initSharedSheetData(n) {
+      if (!n.sheet_data || typeof n.sheet_data !== 'object' || !Array.isArray(n.sheet_data.columns) || !Array.isArray(n.sheet_data.rows)) {
+        n.sheet_data = {
+          columns: [
+            { id: 'col_1', name: 'Nội dung công việc', width: 250 },
+            { id: 'col_2', name: 'Người thực hiện', width: 150 },
+            { id: 'col_3', name: 'Thời hạn', width: 120 },
+            { id: 'col_4', name: 'Ghi chú', width: 200 }
+          ],
+          rows: [
+            { id: 'row_1', height: 38, cells: {} }
+          ]
+        };
+        n.sheet_data.columns.forEach(col => {
+          n.sheet_data.rows[0].cells[col.id] = '';
+        });
+      }
+    }
+
+    function renderSharedSheetTable() {
+      if (!note) return;
+      initSharedSheetData(note);
+
+      const thead = document.getElementById('s-sheet-thead');
+      const tbody = document.getElementById('s-sheet-tbody');
+      if (!thead || !tbody) return;
+
+      const data = note.sheet_data;
+      const isEdit = note.share_perm === 'edit';
+
+      // 1. Render Header
+      let headerHtml = '<tr>';
+      headerHtml += '<th style="width: 50px; text-align: center;">STT</th>';
+      
+      data.columns.forEach(col => {
+        const widthStyle = col.width ? `width: ${col.width}px;` : 'width: 150px;';
+        headerHtml += `
+          <th style="${widthStyle}" data-col-id="${col.id}">
+            <div class="col-header-wrap">
+              <span class="col-header-title" title="${esc(col.name)}">${esc(col.name)}</span>
+              ${isEdit 
+                ? `
+                <div class="col-header-actions">
+                  <button class="col-action-btn edit" title="Đổi tên">✏️</button>
+                  <button class="col-action-btn del" title="Xóa cột">🗑</button>
+                </div>
+                `
+                : ''
+              }
+            </div>
+            ${isEdit ? '<div class="col-resize-handle"></div>' : ''}
+          </th>
+        `;
+      });
+      
+      if (isEdit) {
+        headerHtml += `
+          <th style="width: 80px; text-align: center; background: var(--surface); border-right: none;">
+            <button class="btn-ghost" id="btn-s-sheet-header-add-col" style="padding: 2px 8px; font-size: 11px;" title="Thêm cột">＋ Cột</button>
+          </th>
+        `;
+      }
+      headerHtml += '</tr>';
+      thead.innerHTML = headerHtml;
+
+      // 2. Render Body
+      let bodyHtml = '';
+      data.rows.forEach((row, rowIndex) => {
+        const heightStyle = row.height ? `style="height: ${row.height}px;"` : '';
+        bodyHtml += `<tr ${heightStyle} data-row-id="${row.id}">`;
+        bodyHtml += `
+          <td style="text-align: center; position: relative;">
+            <span class="row-num-text">${rowIndex + 1}</span>
+            ${isEdit 
+              ? `
+              <button class="col-action-btn del row-del-btn" style="display: none; position: absolute; inset: 0; margin: auto; background: var(--surface2); width: 100%; height: 100%; align-items: center; justify-content: center;" title="Xóa hàng">🗑</button>
+              <div class="row-resize-handle"></div>
+              `
+              : ''
+            }
+          </td>
+        `;
+
+        data.columns.forEach(col => {
+          const cellVal = row.cells[col.id] || '';
+          bodyHtml += `
+            <td>
+              <input class="sheet-input" data-col-id="${col.id}" value="${esc(cellVal)}" placeholder="..." ${!isEdit ? 'disabled' : ''} />
+            </td>
+          `;
+        });
+
+        if (isEdit) {
+          bodyHtml += '<td style="background: var(--bg); border-right: none;"></td>';
+        }
+        bodyHtml += '</tr>';
+      });
+      tbody.innerHTML = bodyHtml;
+
+      // 3. Attach Event Listeners
+      if (isEdit) {
+        thead.querySelectorAll('th[data-col-id]').forEach(th => {
+          const colId = th.dataset.colId;
+          
+          const editBtn = th.querySelector('.col-action-btn.edit');
+          if (editBtn) {
+            editBtn.onclick = (e) => {
+              e.stopPropagation();
+              const col = data.columns.find(c => c.id === colId);
+              if (!col) return;
+              const newName = prompt('Nhập tên mới cho cột:', col.name);
+              if (newName && newName.trim()) {
+                col.name = newName.trim();
+                triggerSharedSheetChange();
+                renderSharedSheetTable();
+              }
+            };
+          }
+
+          const delBtn = th.querySelector('.col-action-btn.del');
+          if (delBtn) {
+            delBtn.onclick = (e) => {
+              e.stopPropagation();
+              const col = data.columns.find(c => c.id === colId);
+              if (!col) return;
+              if (!confirm(`Xóa cột "${col.name}"? Thao tác này sẽ xóa toàn bộ dữ liệu của cột này.`)) return;
+              
+              data.columns = data.columns.filter(c => c.id !== colId);
+              data.rows.forEach(r => {
+                delete r.cells[colId];
+              });
+              
+              triggerSharedSheetChange();
+              renderSharedSheetTable();
+            };
+          }
+
+          makeSharedColumnResizable(th, colId);
+        });
+
+        const headerAddColBtn = document.getElementById('btn-s-sheet-header-add-col');
+        if (headerAddColBtn) {
+          headerAddColBtn.onclick = () => addSharedSheetColumn();
+        }
+
+        tbody.querySelectorAll('tr[data-row-id]').forEach(tr => {
+          const rowId = tr.dataset.rowId;
+          const row = data.rows.find(r => r.id === rowId);
+          if (!row) return;
+
+          const sttTd = tr.firstElementChild;
+          const rowNumSpan = sttTd.querySelector('.row-num-text');
+          const rowDelBtn = sttTd.querySelector('.row-del-btn');
+          
+          if (sttTd && rowDelBtn && rowNumSpan) {
+            sttTd.onmouseenter = () => {
+              rowNumSpan.style.display = 'none';
+              rowDelBtn.style.display = 'flex';
+            };
+            sttTd.onmouseleave = () => {
+              rowNumSpan.style.display = 'inline';
+              rowDelBtn.style.display = 'none';
+            };
+            rowDelBtn.onclick = () => {
+              deleteSharedSheetRow(rowId);
+            };
+          }
+
+          tr.querySelectorAll('input.sheet-input').forEach(input => {
+            const colId = input.dataset.colId;
+            input.oninput = () => {
+              row.cells[colId] = input.value;
+              triggerSharedSheetChange();
+            };
+          });
+
+          makeSharedRowResizable(tr, rowId);
+        });
+        
+        const addRowBtn = document.getElementById('btn-s-sheet-add-row');
+        if (addRowBtn) {
+          addRowBtn.onclick = () => addSharedSheetRow();
+        }
+        const addColBtn = document.getElementById('btn-s-sheet-add-col');
+        if (addColBtn) {
+          addColBtn.onclick = () => addSharedSheetColumn();
+        }
+      }
+    }
+
+    function addSharedSheetRow() {
+      if (!note) return;
+      initSharedSheetData(note);
+      
+      const newRowId = 'row_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+      const newRow = {
+        id: newRowId,
+        height: 38,
+        cells: {}
+      };
+      
+      note.sheet_data.columns.forEach(col => {
+        newRow.cells[col.id] = '';
+      });
+      
+      note.sheet_data.rows.push(newRow);
+      triggerSharedSheetChange();
+      renderSharedSheetTable();
+    }
+
+    function deleteSharedSheetRow(rowId) {
+      if (!note) return;
+      if (!confirm('Bạn có chắc chắn muốn xóa hàng này?')) return;
+      
+      note.sheet_data.rows = note.sheet_data.rows.filter(r => r.id !== rowId);
+      triggerSharedSheetChange();
+      renderSharedSheetTable();
+    }
+
+    function addSharedSheetColumn() {
+      if (!note) return;
+      initSharedSheetData(note);
+      
+      const colName = prompt('Nhập tên cột mới:');
+      if (!colName || !colName.trim()) return;
+      
+      const newColId = 'col_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+      const newCol = {
+        id: newColId,
+        name: colName.trim(),
+        width: 150
+      };
+      
+      note.sheet_data.columns.push(newCol);
+      note.sheet_data.rows.forEach(row => {
+        row.cells[newColId] = '';
+      });
+      
+      triggerSharedSheetChange();
+      renderSharedSheetTable();
+    }
+
+    function makeSharedColumnResizable(th, colId) {
+      const handle = th.querySelector('.col-resize-handle');
+      if (!handle) return;
+      
+      let startX, startWidth;
+      
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        startX = e.pageX;
+        startWidth = th.offsetWidth;
+        handle.classList.add('resizing');
+        
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        
+        const onMouseMove = (moveEvent) => {
+          const newWidth = Math.max(50, startWidth + (moveEvent.pageX - startX));
+          th.style.width = newWidth + 'px';
+        };
+        
+        const onMouseUp = () => {
+          handle.classList.remove('resizing');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          window.removeEventListener('mousemove', onMouseMove);
+          window.removeEventListener('mouseup', onMouseUp);
+          
+          const col = note.sheet_data.columns.find(c => c.id === colId);
+          if (col) {
+            col.width = th.offsetWidth;
+            triggerSharedSheetChange();
+          }
+        };
+        
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+      });
+    }
+
+    function makeSharedRowResizable(tr, rowId) {
+      const handle = tr.querySelector('.row-resize-handle');
+      if (!handle) return;
+      
+      let startY, startHeight;
+      
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        startY = e.pageY;
+        startHeight = tr.offsetHeight;
+        handle.classList.add('resizing');
+        
+        document.body.style.cursor = 'row-resize';
+        document.body.style.userSelect = 'none';
+        
+        const onMouseMove = (moveEvent) => {
+          const newHeight = Math.max(30, startHeight + (moveEvent.pageY - startY));
+          tr.style.height = newHeight + 'px';
+        };
+        
+        const onMouseUp = () => {
+          handle.classList.remove('resizing');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          window.removeEventListener('mousemove', onMouseMove);
+          window.removeEventListener('mouseup', onMouseUp);
+          
+          const row = note.sheet_data.rows.find(r => r.id === rowId);
+          if (row) {
+            row.height = tr.offsetHeight;
+            triggerSharedSheetChange();
+          }
+        };
+        
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+      });
+    }
 
     function renderSharedKanbanBoard() {
       const board = document.getElementById('s-kanban-board');
@@ -2612,6 +3499,7 @@ async function checkShareMode() {
             id: note.id,
             title: title,
             kanban_data: note.kanban_data,
+            sheet_data: note.sheet_data,
             actor: 'Link chia sẻ'
           };
           const ed = document.getElementById('s-editor');
@@ -2785,6 +3673,10 @@ document.getElementById('btn-new').addEventListener('click', async () => {
   } catch(e) { toast('Lỗi tạo ghi chú: ' + e.message); }
   btn.disabled = false;
 });
+
+// SHEET ACTIONS
+document.getElementById('btn-sheet-add-row').addEventListener('click', addSheetRow);
+document.getElementById('btn-sheet-add-col').addEventListener('click', addSheetColumn);
 
 // DELETE
 async function deleteNote(n) {
